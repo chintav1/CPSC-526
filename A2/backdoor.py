@@ -2,7 +2,7 @@ import socketserver
 import socket
 import sys, os, shutil
 class MyTCPHandler(socketserver.BaseRequestHandler):
-   
+# wassap test comment    
    
    BUFFER_SIZE = 4096
    def handle(self):
