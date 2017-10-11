@@ -10,7 +10,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
        intro = self.request.sendall(bytearray("Identify yourself!\n", "utf-8"))
        #password_prompt = self.request.sendall(bytearray("Password: ", "utf-8"))
        #data += self.request.recv(self.BUFFER_SIZE, socket.MSG_DONTWAIT)
-
+       passed = False;
 
        while 1:
            data = self.request.recv(self.BUFFER_SIZE)
@@ -24,18 +24,29 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                break
            data = data.decode( "utf-8")
 
-           passed = False
-           if "pass " in data.strip():      # compare user entered password and the actual password
+           if "pass " in data.strip() and passed == False:      # compare user entered password and the actual password
                if (data.split(None, 2)[1] == password):                           
                    self.request.sendall(bytearray("welcome boss\n", "utf-8"))
                    passed = True
+                   continue
                else:
                     self.request.sendall(bytearray("bad password\n", "utf-8"))
                           
            # start commands here
            if passed == True:
+               # pwd
                if data.strip() == "pwd":
-                   self.request.sendall(bytearray(os.curdir, "utf-8")) 
+                   self.request.sendall(bytearray(os.getcwd() + "\n", "utf-8")) 
+                   continue
+               # cd <dir>
+               if "cd " in data.strip():
+                   self.request.sendall(bytearray("going to " + data.split(None,2)[1] + "\n", "utf-8"))
+                   os.chdir(data.split(None, 2)[1])
+                   continue
+               
+               # end of all commands, everything else don't understand
+               else:
+                   self.request.sendall(bytearray("Sorry don't understand your request\n", "utf-8"))
            
            
            
