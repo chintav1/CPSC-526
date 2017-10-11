@@ -6,6 +6,8 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
    
    BUFFER_SIZE = 4096
    def handle(self):
+       commands = ["pwd", "cd <dir>", "ls", "cp <file1> <file2>", "mv <file1> <file2>", "rm <file>", "cat <file>", "snap", "diff", "help [cmd]", "logout", "off"]
+       descriptions = ["return the current working directory", "change the current working directory to <dir>", "list the contents of the current working directory", "copy file1 to file2", "rename file1 to file2", "delete file"]
        password = "cpsc"
        intro = self.request.sendall(bytearray("Identify yourself!\n", "utf-8"))
        
@@ -68,6 +70,25 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                    except:
                        self.request.sendall(bytearray("bad request\n", "utf-8"))
                    continue
+
+                # help [cmd]
+               if data.split(None, 1)[0] == "help":
+                  for cmd in commands:
+                    self.request.sendall(bytearray(cmd + "\n", "utf-8"))
+                  continue
+
+
+               if data.split(None, 1)[0] == "cat":
+                  catfile = data.split(None, 2)[1]
+                  a = open(catfile)
+                  contents = a.read()
+                  self.request.sendall(bytearray(contents, "utf-8"))
+                  continue
+
+
+                
+
+                  
                ######                     #####
                #                              #
                #    ADD MORE COMMANDS HERE!   #
