@@ -77,7 +77,9 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                     self.request.sendall(bytearray(cmd + "\n", "utf-8"))
                   continue
 
+        
 
+                # cat <file>
                if data.split(None, 1)[0] == "cat":
                   catfile = data.split(None, 2)[1]
                   a = open(catfile)
