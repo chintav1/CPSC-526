@@ -24,7 +24,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                break
            data = data.decode( "utf-8")
 
-           if "pass " in data.strip() and passed == False:      # compare user entered password and the actual password
+           if data.split(None, 1)[0] == "pass" and passed == False:      # compare user entered password and the actual password
                if (data.split(None, 2)[1] == password):                           
                    self.request.sendall(bytearray("welcome boss\n", "utf-8"))
                    passed = True
@@ -39,10 +39,22 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                    self.request.sendall(bytearray(os.getcwd() + "\n", "utf-8")) 
                    continue
                # cd <dir>
-               if "cd " in data.strip():
-                   self.request.sendall(bytearray("going to " + data.split(None,2)[1] + "\n", "utf-8"))
-                   os.chdir(data.split(None, 2)[1])
+               if data.split(None, 1)[0] == "cd":
+                   try:
+                      self.request.sendall(bytearray("going to " + data.split(None,2)[1] + "\n", "utf-8"))
+                      os.chdir(data.split(None, 2)[1])
+                   except:
+                       self.request.sendall(bytearray("bad request\n", "utf-8"))
                    continue
+               # ls
+               if data.strip() == "ls":
+                  for files in os.listdir(os.getcwd()):
+                      self.request.sendall(bytearray(files + "\n", "utf-8"))
+                  continue
+               # cp <file1> <file2>
+               if "cp" in data.strip():
+                   continue
+               
                
                # end of all commands, everything else don't understand
                else:
