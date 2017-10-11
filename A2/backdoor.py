@@ -52,10 +52,28 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                       self.request.sendall(bytearray(files + "\n", "utf-8"))
                   continue
                # cp <file1> <file2>
-               if "cp" in data.strip():
+               if data.split(None, 1)[0] == "cp":
+                   file1 = data.split(None, 2)[1]
+                   file2 = data.split(None, 3)[2]
+                   try:
+                       shutil.copyfile(file1, file2)
+                   except:
+                       self.request.sendall(bytearray("bad request\n", "utf-8"))
                    continue
-               
-               
+               # mv <file1> <file2>
+               if data.split(None, 1)[0] == "mv":
+                   file1 = data.split(None, 2)[1]
+                   file2 = data.split(None, 3)[2]
+                   try:
+                      os.rename(file1, file2) 
+                   except:
+                       self.request.sendall(bytearray("bad request\n", "utf-8"))
+                   continue
+               ######                     #####
+               #                              #
+               #    ADD MORE COMMANDS HERE!   #
+               #                              #
+               ######                     #####
                # end of all commands, everything else don't understand
                else:
                    self.request.sendall(bytearray("Sorry don't understand your request\n", "utf-8"))
