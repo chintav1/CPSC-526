@@ -8,8 +8,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
    def handle(self):
        password = "cpsc"
        intro = self.request.sendall(bytearray("Identify yourself!\n", "utf-8"))
-       #password_prompt = self.request.sendall(bytearray("Password: ", "utf-8"))
-       #data += self.request.recv(self.BUFFER_SIZE, socket.MSG_DONTWAIT)
+       
        passed = False;
 
        while 1:
@@ -24,8 +23,8 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                break
            data = data.decode( "utf-8")
 
-           if data.split(None, 1)[0] == "pass" and passed == False:      # compare user entered password and the actual password
-               if (data.split(None, 2)[1] == password):                           
+           if (passed == False):      # compare user entered password and the actual password
+               if (data.split(None, 2)[0] == password):                           
                    self.request.sendall(bytearray("welcome boss\n", "utf-8"))
                    passed = True
                    continue
