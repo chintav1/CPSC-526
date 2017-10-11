@@ -23,11 +23,18 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
            if len(data) == 0:
                break
            data = data.decode( "utf-8")
-           #data_string = str(data)
-
-           if (data.strip() == password):                           #compare user entered password and the actual password
-             self.request.sendall(bytearray("welcome boss\n", "utf-8"))
-            
+           
+           while 1:     # loop until correct password entered
+               if "pass " in data.strip():      # compare user entered password and the actual password
+                   if (data.split(None, 2)[1] == password):                           
+                       self.request.sendall(bytearray("welcome boss\n", "utf-8"))
+                       break
+                   else:
+                       self.request.sendall(bytearray("bad password\n", "utf-8"))
+           
+           # start commands here            
+           if data.strip() == "pwd":
+               self.request.sendall(bytearray("do something\n", "utf-8"))
           
            #self.request.sendall( bytearray( "You said: " + data, "utf-8"))
            
