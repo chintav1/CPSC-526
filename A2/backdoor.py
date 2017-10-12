@@ -116,11 +116,14 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
 
                 # help [cmd]
                if data.split(None, 1)[0] == "help":
-                  command = data.strip("help ")
-                  if command == '':
-                    self.request.sendall(bytearray("supported commands:\n", "utf-8"))
-                    for cmd in descriptions.keys():
-                      self.request.sendall(bytearray(cmd + "\n", "utf-8"))
+                  if len(data.split()) == 1:
+                      #command = data.strip("help ")
+                      #if command == '':
+                      self.request.sendall(bytearray("supported commands:\n", "utf-8"))
+                      for cmd in descriptions.keys():
+                          self.request.sendall(bytearray(cmd + "\n", "utf-8"))
+                  elif len(data.split()) > 1:
+                      self.request.sendall(bytearray("check what the other command is\n", "utf-8"))
 
                   
                   else:
