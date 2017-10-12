@@ -68,8 +68,10 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                
                # ls
                if data.strip() == "ls":
-                  for files in os.listdir(os.getcwd()):
-                      self.request.sendall(bytearray(files + "\n", "utf-8"))
+                  command = os.popen("ls -l")          #execute ls -l command from operating system
+                  contents = command.read()                     #read the output
+                  self.request.sendall(bytearray(contents,  "utf-8")) #write output to the server
+                  self.request.sendall(bytearray("\n",  "utf-8")) #write output to the server
                   continue
                
                # cp <file1> <file2>
@@ -145,7 +147,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
 
                   
                
-                 
+    
 
                 # off
                if data.split(None, 1)[0] == "off":
