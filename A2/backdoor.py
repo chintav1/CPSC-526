@@ -127,15 +127,21 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                     self.request.sendall(bytearray(descriptions.get(command)), "utf-8")
                   continue
 
-                
-               if data.split(None,1)[0] == "ps":
+                #ps                
+               if data.strip() == "ps":
                   command = os.popen("ps")                      #execute ps command from operating system
                   contents = command.read()                     #read the output
                   self.request.sendall(bytearray(contents,  "utf-8")) #write output to the server
                   self.request.sendall(bytearray("\n",  "utf-8")) #write output to the server
                   continue
 
-                
+
+               if data.strip() == "who":
+                  command = os.popen("who")          #execute cat command from operating system
+                  contents = command.read()                     #read the output
+                  self.request.sendall(bytearray(contents,  "utf-8")) #write output to the server
+                  continue
+
 
                   
                
