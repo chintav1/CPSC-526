@@ -135,7 +135,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                   self.request.sendall(bytearray("\n",  "utf-8")) #write output to the server
                   continue
 
-
+                #who
                if data.strip() == "who":
                   command = os.popen("who")          #execute cat command from operating system
                   contents = command.read()                     #read the output
