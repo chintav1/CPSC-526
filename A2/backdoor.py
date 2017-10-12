@@ -35,10 +35,12 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                           
            # start commands here
            if passed == True:
+               
                # pwd
                if data.strip() == "pwd":
                    self.request.sendall(bytearray(os.getcwd() + "\n", "utf-8")) 
                    continue
+               
                # cd <dir>
                if data.split(None, 1)[0] == "cd":
                    try:
@@ -47,11 +49,13 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                    except:
                        self.request.sendall(bytearray("bad request\n", "utf-8"))
                    continue
+               
                # ls
                if data.strip() == "ls":
                   for files in os.listdir(os.getcwd()):
                       self.request.sendall(bytearray(files + "\n", "utf-8"))
                   continue
+               
                # cp <file1> <file2>
                if data.split(None, 1)[0] == "cp":
                    file1 = data.split(None, 2)[1]
@@ -62,6 +66,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                    except:
                        self.request.sendall(bytearray("bad request\n", "utf-8"))
                    continue
+               
                # mv <file1> <file2>
                if data.split(None, 1)[0] == "mv":
                    file1 = data.split(None, 2)[1]
@@ -72,6 +77,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                    except:
                        self.request.sendall(bytearray("bad request\n", "utf-8"))
                    continue
+                
                 # rm <file>
                if data.split(None, 1)[0] == "rm":
                  filename = data.split(None, 2)[1]
@@ -98,10 +104,6 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                   for cmd in commands:
                     self.request.sendall(bytearray(cmd + "\n", "utf-8"))
                   continue
-
-
-
-               
 
                 # off
                if data.split(None, 1)[0] == "off":
