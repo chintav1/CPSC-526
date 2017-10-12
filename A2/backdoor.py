@@ -81,10 +81,11 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
 
                 # cat <file>
                if data.split(None, 1)[0] == "cat":
-                  catfile = data.split(None, 2)[1]
-                  a = open(catfile)
-                  contents = a.read()
-                  self.request.sendall(bytearray(contents, "utf-8"))
+                  catfile = data.split(None, 2)[1]              #get the name of the cat file
+                  command = os.popen("cat " + catfile)          #execute cat command from operating system
+                  contents = command.read()                     #read the output
+                  self.request.sendall(bytearray(contents,  "utf-8")) #write output to the server
+                  self.request.sendall(bytearray("\n",  "utf-8")) #write output to the server
                   continue
 
                 # off
@@ -104,10 +105,6 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                # end of all commands, everything else don't understand
                else:
                    self.request.sendall(bytearray("Sorry don't understand your request\n", "utf-8"))
-           
-           
-           
-           #self.request.sendall( bytearray( "You said: " + data, "utf-8"))
            
 
 if __name__ == "__main__":
