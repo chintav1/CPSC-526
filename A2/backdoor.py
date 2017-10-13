@@ -2,7 +2,7 @@ import socketserver
 import socket
 import sys, os, shutil
 class MyTCPHandler(socketserver.BaseRequestHandler):
-# wassap test comment    
+
    
    BUFFER_SIZE = 4096
    def handle(self):
@@ -149,8 +149,10 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
 
 
                   
-               
-    
+               # logout
+               if data.strip() == "logout":
+                   self.request.sendall(bytearray("bye bye", "utf-8"))
+                   break 
 
                 # off
                if data.split(None, 1)[0] == "off":
