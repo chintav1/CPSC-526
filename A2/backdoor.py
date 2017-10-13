@@ -1,6 +1,8 @@
 import socketserver
 import socket
 import sys, os, shutil
+
+import hashlib
 class MyTCPHandler(socketserver.BaseRequestHandler):
 
    
@@ -23,7 +25,11 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
        descriptions["ps"] = 'ps - show currently running processes'
        descriptions["who"] = 'who - list user[s] currently logged in'
 
+
+       file_hash = {}
+
        password = "cpsc"
+
 
        intro = self.request.sendall(bytearray("Identify yourself!\n", "utf-8"))
        
@@ -115,6 +121,22 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                   self.request.sendall(bytearray("\n",  "utf-8")) #write output to the server
                   continue
                 
+                #snap
+               if data.strip() == "snap":
+                  command = os.popen('ls -d "$PWD"/*')
+                  contents = command.read()
+                  
+                  for string in contents:
+                    
+
+                    with open(string, 'rb') as afile:
+                      buff = afile.read()
+                      hasher.update(buf)
+                  print(hasher.hexdigest())
+                  continue
+                  
+
+                
 
                 # help [cmd]
                if data.split(None, 1)[0] == "help":
@@ -152,7 +174,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                   
                # logout
                if data.strip() == "logout":
-                   self.request.sendall(bytearray("bye bye", "utf-8"))
+                   self.request.sendall(bytearray("bye bye\n", "utf-8"))
                    break 
 
                 # off
