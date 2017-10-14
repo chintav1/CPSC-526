@@ -52,7 +52,8 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                    passed = True
                    continue
                else:
-                    self.request.sendall(bytearray("bad password\n", "utf-8"))
+                    self.request.sendall(bytearray("droping connection...\n", "utf-8"))
+                    break
                           
            # start commands here
            if passed == True and len(data) > 1:
