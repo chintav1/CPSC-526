@@ -165,6 +165,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                                hasher.update(buff)
                        file_hash2[path] = hasher.hexdigest()
                    
+
                    list1 = []
                    list2 = []
 
@@ -180,18 +181,35 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                    fh2 = fh2.splitlines()
 
                    difference = difflib.ndiff(fh, fh2)
+=======
+                       if ((path in file_hash.keys()) and (path not in file_hash2.keys())):
+                         self.request.sendall(bytearray("%s - was deleted", path, "utf-8"))
+                         continue
+                   
+
+                   '''difference = difflib.ndiff(file_hash[path], file_hash2[path])
+>>>>>>> 45f8d5248509f634688033d3fed7371d446c7af6
                    for a in difference:
                        if len(a.split()) > 1:                   # prevent going out of index
                            b = a.split(None, 1)
                            del b[0]
                            b = "".join(b)
                            if a.split()[0] == "+":              # check if added
+<<<<<<< HEAD
                                self.request.sendall(bytearray(b.strip() + " - was added\n", "utf-8"))
                            elif a.split()[0] == "-":            # check if deleted
                                self.request.sendall(bytearray(b.strip() + " - was deleted\n", "utf-8"))
                            elif a.split()[0] == "?":            # check if changed
                                self.request.sendall(bytearray(b.strip() + " - was changed\n", "utf-8"))
                    self.request.sendall(bytearray("\n".join(list(difference)), "utf-8"))
+=======
+                               self.request.sendall(bytearray(path + " - was added\n", "utf-8"))
+                           elif a.split()[0] == "-":            # check if deleted
+                               self.request.sendall(bytearray(path + " - was deleted\n", "utf-8"))
+                           elif a.split()[0] == "?":            # check if changed
+                               self.request.sendall(bytearray(path + " - was changed\n", "utf-8"))
+                      self.request.sendall(bytearray("\n".join(list(difference)), "utf-8"))'''
+>>>>>>> 45f8d5248509f634688033d3fed7371d446c7af6
                    continue
 
                 # help [cmd]
