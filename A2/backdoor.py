@@ -165,6 +165,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                                hasher.update(buff)
                        file_hash2[path] = hasher.hexdigest()
                        print(hasher.hexdigest())
+
                    for path in file_hash.keys():
                        if ((path in file_hash.keys()) and (path not in file_hash2.keys())):
                            self.request.sendall(bytearray(path + " - was deleted\n", "utf-8"))
@@ -176,53 +177,6 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                    for path in file_hash2.keys():
                        if ((path in file_hash2.keys()) and (path not in file_hash.keys())):
                            self.request.sendall(bytearray(path + " - was added\n", "utf-8"))
-
-                      
-                   '''    elif ((path not in file_hash2.keys()) and (path in file_hash.keys())):
-                         self.request.sendall(bytearray(path + " was deleted" + "\n", "utf-8"))
-
-                       elif ((path in file_hash2.keys()) and (path in file_hash.keys()) and (file_hash2[path] in file_hash2.values()) and (file_hash[path] not in file_hash.values())):
-                         self.request.sendall(bytearray(path + " was changed" + "\n", "utf-8"))
-
-                         
-
-                   difference = difflib.ndiff(file_hash[path], file_hash2[path])
-                       print(hasher.hexdigest())
-                   for path in file_hash.keys():
-                       if ((path in file_hash.keys()) and (path not in file_hash2.keys())):
-                           self.request.sendall(bytearray(path + " - was deleted\n", "utf-8"))
-                         
-                       if ((path in file_hash2.keys()) and (path in file_hash.keys())):      #in the new contents but not in original, which means it was added
-                           if file_hash.get(path) != file_hash2.get(path):
-                               self.request.sendall(bytearray(path + " - was changed\n", "utf-8"))
-                         
-                   for path in file_hash2.keys():
-                       if ((path in file_hash2.keys()) and (path not in file_hash.keys())):
-                           self.request.sendall(bytearray(path + " - was added\n", "utf-8"))
-
-                         
-
-                   difference = difflib.ndiff(file_hash[path], file_hash2[path])
-
-                   for a in difference:
-                       if len(a.split()) > 1:                   # prevent going out of index
-                           b = a.split(None, 1)
-                           del b[0]
-                           b = "".join(b)
-
-                               self.request.sendall(bytearray(b.strip() + " - was added\n", "utf-8"))
-                           elif a.split()[0] == "-":            # check if deleted
-                               self.request.sendall(bytearray(b.strip() + " - was deleted\n", "utf-8"))
-                           elif a.split()[0] == "?":            # check if changed
-                               self.request.sendall(bytearray(b.strip() + " - was changed\n", "utf-8"))
-                   self.request.sendall(bytearray("\n".join(list(difference)), "utf-8"))
-
-                               self.request.sendall(bytearray(path + " - was added\n", "utf-8"))
-                           elif a.split()[0] == "-":            # check if deleted
-                               self.request.sendall(bytearray(path + " - was deleted\n", "utf-8"))
-                           elif a.split()[0] == "?":            # check if changed
-                               self.request.sendall(bytearray(path + " - was changed\n", "utf-8"))
-                      self.request.sendall(bytearray("\n".join(list(difference)), "utf-8"))'''
 
                    continue
 
