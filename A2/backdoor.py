@@ -56,7 +56,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                     self.request.sendall(bytearray("bad password\n", "utf-8"))
                           
            # start commands here
-           if passed == True:
+           if passed == True and len(data) > 1:
 
                # pwd
                if data.strip() == "pwd":
@@ -125,18 +125,60 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                if data.strip() == "snap":
                   command = os.popen('ls -d "$PWD"/*')
                   contents = command.read()
-                  
+                  hasher = hashlib.md5()
+                  contents = contents.splitlines()
                   for string in contents:
                     
-
-                    with open(string, 'rb') as afile:
-                      buff = afile.read()
-                      hasher.update(buf)
-                  print(hasher.hexdigest())
+                    if os.path.isfile(string):
+                        with open(string, 'rb') as afile:
+                            buff = afile.read()
+                            hasher.update(buff)
+                   
+                    file_hash[string] = hasher.hexdigest()
+                   
+                    print(string)
+                    print(hasher.hexdigest())
+                  self.request.sendall(bytearray("OK\n", "utf-8"))
                   continue
                   
 
-                
+               # diff 
+               if data.strip() == "diff":
+                   
+                   # first check if a snapshot has been made yet
+                   if not file_hash:
+                       self.request.sendall(bytearray("ERROR: no snapshot\n", "utf-8"))
+                       continue
+
+                   contents = os.popen('ls -d "$PWD"/*')
+                   contents = contents.read()
+                   contents = contents.splitlines()
+                   hasher = hashlib.md5()
+                   
+                   file_hash2 = {}
+                   
+                   for string in contents:
+                       if os.path.isfile(string):
+                           with open(string, 'rb') as afile:
+                               buff = afile.read()
+                               hasher.update(buff)
+                       file_hash2[string] = hasher.hexdigest()
+                   
+
+                   difference = difflib.ndiff(file_hash, file_hash2)
+                   for a in difference:
+                       if len(a.split()) > 1:                   # prevent going out of index
+                           b = a.split(None, 1)
+                           del b[0]
+                           b = "".join(b)
+                           if a.split()[0] == "+":              # check if added
+                               self.request.sendall(bytearray(b + " - was added\n", "utf-8"))
+                           elif a.split()[0] == "-":            # check if deleted
+                               self.request.sendall(bytearray(b + " - was deleted\n", "utf-8"))
+                           elif a.split()[0] == "?":            # check if changed
+                               self.request.sendall(bytearray(b + " - was changed\n", "utf-8"))
+                   self.request.sendall(bytearray("\n".join(list(difference)), "utf-8"))
+                   continue
 
                 # help [cmd]
                if data.split(None, 1)[0] == "help":
@@ -181,35 +223,6 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                   self.request.sendall(bytearray("Terminating myself...So long\n", "utf-8"))
                   os._exit(1)                                                       #exit without ptinting traceback
                 
-               # diff 
-               if data.strip() == "diff":
-                   m = os.popen("ls -l")
-                   m = m.read()
-                   n = os.popen("ls")
-                   n = n.read()
-                   m = m.splitlines() 
-                   n = n.splitlines()
-                   #m = "abd defg".splitlines()
-                   #n = "abc defg".splitlines()
-                   difference = difflib.ndiff(m, n)
-                   for a in difference:
-                       if len(a.split()) > 1:                   # prevent going out of index
-                           b = a.split(None, 1)
-                           del b[0]
-                           b = "".join(b)
-                           if a.split()[0] == "+":              # check if added
-                               self.request.sendall(bytearray(b + " - was added\n", "utf-8"))
-                           elif a.split()[0] == "-":            # check if deleted
-                               self.request.sendall(bytearray(b + " - was deleted\n", "utf-8"))
-                           elif a.split()[0] == "?":            # check if changed
-                               self.request.sendall(bytearray(b + " - was changed\n", "utf-8"))
-                   self.request.sendall(bytearray("\n".join(list(difference)), "utf-8"))
-
-               ######                     #####
-               #                              #
-               #    ADD MORE COMMANDS HERE!   #
-               #                              #
-               ######                     #####
                # end of all commands, everything else don't understand
                else:
                    self.request.sendall(bytearray("Sorry don't understand your request\n", "utf-8"))
