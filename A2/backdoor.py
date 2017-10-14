@@ -127,16 +127,18 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                   contents = command.read()
                   hasher = hashlib.md5()
                   contents = contents.splitlines()
-                  for string in contents:
+                  for path in contents:
                     
-                    if os.path.isfile(string):
-                        with open(string, 'rb') as afile:
+                    if os.path.isfile(path):
+
+                      #source for lines 135-137: http://pythoncentral.io/hashing-files-with-python/
+                        with open(path, 'rb') as afile:
                             buff = afile.read()
                             hasher.update(buff)
                    
-                    file_hash[string] = hasher.hexdigest()
+                    file_hash[path] = hasher.hexdigest()
                    
-                    print(string)
+                    print(path)
                     print(hasher.hexdigest())
                   self.request.sendall(bytearray("OK\n", "utf-8"))
                   continue
@@ -157,15 +159,15 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                    
                    file_hash2 = {}
                    
-                   for string in contents:
-                       if os.path.isfile(string):
-                           with open(string, 'rb') as afile:
+                   for path in contents:
+                       if os.path.isfile(path):
+                           with open(path, 'rb') as afile:                  #open the file and read as binary (rb)
                                buff = afile.read()
                                hasher.update(buff)
-                       file_hash2[string] = hasher.hexdigest()
+                       file_hash2[path] = hasher.hexdigest()
                    
 
-                   difference = difflib.ndiff(file_hash, file_hash2)
+                   difference = difflib.ndiff(file_hash[path], file_hash2[path])
                    for a in difference:
                        if len(a.split()) > 1:                   # prevent going out of index
                            b = a.split(None, 1)
