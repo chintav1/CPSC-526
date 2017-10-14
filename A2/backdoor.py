@@ -5,7 +5,6 @@ import difflib
 import hashlib
 class MyTCPHandler(socketserver.BaseRequestHandler):
 
-   
    BUFFER_SIZE = 4096
    def handle(self):
 
@@ -26,7 +25,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
        descriptions["who"] = 'who - list user[s] currently logged in'
 
 
-       file_hash = {}
+       #file_hash = {}
 
        password = "cpsc"
 
@@ -166,19 +165,32 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                                hasher.update(buff)
                        file_hash2[path] = hasher.hexdigest()
                    
+                   list1 = []
+                   list2 = []
 
-                   difference = difflib.ndiff(file_hash[path], file_hash2[path])
+                   for key, value in file_hash.items():
+                       list1.append(key + " " + value)
+                   for key, value in file_hash2.items():
+                       list2.append(key + " " + value)
+
+                   fh = "\n".join(list1)
+                   fh2 = "\n".join(list2)
+
+                   fh = fh.splitlines()
+                   fh2 = fh2.splitlines()
+
+                   difference = difflib.ndiff(fh, fh2)
                    for a in difference:
                        if len(a.split()) > 1:                   # prevent going out of index
                            b = a.split(None, 1)
                            del b[0]
                            b = "".join(b)
                            if a.split()[0] == "+":              # check if added
-                               self.request.sendall(bytearray(b + " - was added\n", "utf-8"))
+                               self.request.sendall(bytearray(b.strip() + " - was added\n", "utf-8"))
                            elif a.split()[0] == "-":            # check if deleted
-                               self.request.sendall(bytearray(b + " - was deleted\n", "utf-8"))
+                               self.request.sendall(bytearray(b.strip() + " - was deleted\n", "utf-8"))
                            elif a.split()[0] == "?":            # check if changed
-                               self.request.sendall(bytearray(b + " - was changed\n", "utf-8"))
+                               self.request.sendall(bytearray(b.strip() + " - was changed\n", "utf-8"))
                    self.request.sendall(bytearray("\n".join(list(difference)), "utf-8"))
                    continue
 
@@ -234,6 +246,7 @@ if __name__ == "__main__":
    HOST, PORT = "localhost", int(sys.argv[1])
    server = socketserver.TCPServer((HOST, PORT), MyTCPHandler)
    print("backdoor listening on port ", PORT)
+   file_hash = {}
    server.serve_forever()
   
    
