@@ -166,25 +166,9 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                        file_hash2[path] = hasher.hexdigest()
                    
 
-                   list1 = []
-                   list2 = []
-
-                   for key, value in file_hash.items():
-                       list1.append(key + " " + value)
-                   for key, value in file_hash2.items():
-                       list2.append(key + " " + value)
-
-                   fh = "\n".join(list1)
-                   fh2 = "\n".join(list2)
-
-                   fh = fh.splitlines()
-                   fh2 = fh2.splitlines()
-
-                   difference = difflib.ndiff(fh, fh2)
-=======
-                       if ((path in file_hash.keys()) and (path not in file_hash2.keys())):
-                         self.request.sendall(bytearray("%s - was deleted", path, "utf-8"))
-                         continue
+                       if ((path in file_hash2.keys()) and (path not in file_hash.keys())):
+                           self.request.sendall(bytearray(path + " - was deleted", "utf-8"))
+                         
                    
 
                    '''difference = difflib.ndiff(file_hash[path], file_hash2[path])
@@ -209,7 +193,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                            elif a.split()[0] == "?":            # check if changed
                                self.request.sendall(bytearray(path + " - was changed\n", "utf-8"))
                       self.request.sendall(bytearray("\n".join(list(difference)), "utf-8"))'''
->>>>>>> 45f8d5248509f634688033d3fed7371d446c7af6
+
                    continue
 
                 # help [cmd]
