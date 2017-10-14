@@ -126,19 +126,31 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                   contents = command.read()
                   hasher = hashlib.md5()
                   contents = contents.splitlines()
-                  for path in contents:
+                  
+                  #for path in contents:
                     
-                    if os.path.isfile(path):
+                   # if os.path.isfile(path):
 
                       #source for lines 135-137: http://pythoncentral.io/hashing-files-with-python/
-                        with open(path, 'rb') as afile:
-                            buff = afile.read()
-                            hasher.update(buff)
+                    #    with open(path, 'rb') as afile:
+                      #      buff = afile.read()
+                     #       hasher.update(buff)
                    
-                    file_hash[path] = hasher.hexdigest()
+                   # file_hash[path] = hasher.hexdigest()
                    
-                    print(path)
-                    print(hasher.hexdigest())
+                    #print(path)
+                    #print(hasher.hexdigest())
+                  
+
+                  for path in contents:
+                       if os.path.isfile(path):
+                           with open(path, 'rb') as afile:
+                               buff = afile.read()
+                               hasher = hashlib.md5(buff)
+                       file_hash[path] = hasher.hexdigest()
+                       print(path + " :: " + file_hash[path])
+
+                  
                   self.request.sendall(bytearray("OK\n", "utf-8"))
                   continue
                   
@@ -158,13 +170,23 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                    
                    file_hash2 = {}
                    
+                  # for path in contents:
+                   #    if os.path.isfile(path):
+                    #       with open(path, 'rb') as afile:                  #open the file and read as binary (rb)
+                     #          buff = afile.read()
+                      #         hasher.update(buff)
+                       #file_hash2[path] = hasher.hexdigest()
+                      # print(path)
+                       #print(hasher.hexdigest())
+
+
                    for path in contents:
                        if os.path.isfile(path):
-                           with open(path, 'rb') as afile:                  #open the file and read as binary (rb)
+                           with open(path, 'rb') as afile:
                                buff = afile.read()
-                               hasher.update(buff)
+                               hasher = hashlib.md5(buff)
                        file_hash2[path] = hasher.hexdigest()
-                       print(hasher.hexdigest())
+                       print(path + " :: " + file_hash2[path])
 
                    for path in file_hash.keys():
                        if ((path in file_hash.keys()) and (path not in file_hash2.keys())):
