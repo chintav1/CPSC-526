@@ -164,12 +164,20 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                                buff = afile.read()
                                hasher.update(buff)
                        file_hash2[path] = hasher.hexdigest()
-                   
-
-                       if ((path in file_hash2.keys()) and (path not in file_hash.keys())):
-                           self.request.sendall(bytearray(path + " - was deleted", "utf-8"))
+                       print(hasher.hexdigest())
+                   for path in file_hash.keys():
+                       if ((path in file_hash.keys()) and (path not in file_hash2.keys())):
+                           self.request.sendall(bytearray(path + " - was deleted\n", "utf-8"))
                          
-                   
+                       if ((path in file_hash2.keys()) and (path in file_hash.keys())):      #in the new contents but not in original, which means it was added
+                           if file_hash.get(path) != file_hash2.get(path):
+                               self.request.sendall(bytearray(path + " - was changed\n", "utf-8"))
+                         
+                   for path in file_hash2.keys():
+                       if ((path in file_hash2.keys()) and (path not in file_hash.keys())):
+                           self.request.sendall(bytearray(path + " - was added\n", "utf-8"))
+
+                         
 
                    '''difference = difflib.ndiff(file_hash[path], file_hash2[path])
 >>>>>>> 45f8d5248509f634688033d3fed7371d446c7af6
