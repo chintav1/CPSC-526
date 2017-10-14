@@ -25,16 +25,14 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
        descriptions["who"] = 'who - list user[s] currently logged in'
 
 
-       #file_hash = {}
-
        password = "cpsc"
-
 
        intro = self.request.sendall(bytearray("Identify yourself!\n", "utf-8"))
        
        passed = False;
 
        while 1:
+           self.request.sendall(bytearray("> ", "utf-8"))
            data = self.request.recv(self.BUFFER_SIZE)
            if len(data) == self.BUFFER_SIZE:
                while 1:
@@ -52,7 +50,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                    passed = True
                    continue
                else:
-                    self.request.sendall(bytearray("droping connection...\n", "utf-8"))
+                    self.request.sendall(bytearray("bad password, dropping connection...\n", "utf-8"))
                     break
                           
            # start commands here
@@ -125,24 +123,9 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                if data.strip() == "snap":
                   command = os.popen('ls -d "$PWD"/*')
                   contents = command.read()
-                  hasher = hashlib.md5()
                   contents = contents.splitlines()
-                  
-                  #for path in contents:
-                    
-                   # if os.path.isfile(path):
 
-                      #source for lines 135-137: http://pythoncentral.io/hashing-files-with-python/
-                    #    with open(path, 'rb') as afile:
-                      #      buff = afile.read()
-                     #       hasher.update(buff)
-                   
-                   # file_hash[path] = hasher.hexdigest()
-                   
-                    #print(path)
-                    #print(hasher.hexdigest())
-                  
-
+                  # create hash to be stored
                   for path in contents:
                        if os.path.isfile(path):
                            with open(path, 'rb') as afile:
@@ -167,20 +150,10 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                    contents = os.popen('ls -d "$PWD"/*')
                    contents = contents.read()
                    contents = contents.splitlines()
-                   hasher = hashlib.md5()
                    
                    file_hash2 = {}
                    
-                  # for path in contents:
-                   #    if os.path.isfile(path):
-                    #       with open(path, 'rb') as afile:                  #open the file and read as binary (rb)
-                     #          buff = afile.read()
-                      #         hasher.update(buff)
-                       #file_hash2[path] = hasher.hexdigest()
-                      # print(path)
-                       #print(hasher.hexdigest())
-
-
+                   # create hash to be compared with snap's
                    for path in contents:
                        if os.path.isfile(path):
                            with open(path, 'rb') as afile:
@@ -189,38 +162,44 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                        file_hash2[path] = hasher.hexdigest()
                        print(path + " :: " + file_hash2[path])
 
+                   # check differences
                    for path in file_hash.keys():
+                  
+                       # if in old but not new, deleted
                        if ((path in file_hash.keys()) and (path not in file_hash2.keys())):
                            self.request.sendall(bytearray(path + " - was deleted\n", "utf-8"))
                          
-                       if ((path in file_hash2.keys()) and (path in file_hash.keys())):      #in the new contents but not in original, which means it was added
-                           if file_hash.get(path) != file_hash2.get(path):
+                      # if present in both, check hash, if hashes differ, it was changed
+                       if ((path in file_hash2.keys()) and (path in file_hash.keys())):  
+                          if file_hash.get(path) != file_hash2.get(path):
                                self.request.sendall(bytearray(path + " - was changed\n", "utf-8"))
                          
+                   # check paths in new; if in new and not old, added     
                    for path in file_hash2.keys():
                        if ((path in file_hash2.keys()) and (path not in file_hash.keys())):
                            self.request.sendall(bytearray(path + " - was added\n", "utf-8"))
-
                    continue
 
                 # help [cmd]
                if data.split(None, 1)[0] == "help":
                 
+                  # if only wrote help
                   if len(data.split()) == 1:
                       self.request.sendall(bytearray("supported commands:\n", "utf-8"))
                       for cmd in descriptions.keys():
                           self.request.sendall(bytearray(cmd + "\n", "utf-8"))
                   
+                  # if wanted more detailed help
                   elif len(data.split()) == 2:
                       command = descriptions.get(data.split()[1])
                       self.request.sendall(bytearray(command + "\n", "utf-8"))
                   
-                  else:                                                                         #accept exactly one command
+                  else:                                     
                     self.request.sendall(bytearray("bad request\n", "utf-8"))
                   continue
 
 
-                #ps                
+                # ps                
                if data.strip() == "ps":
                   command = os.popen("ps")                      #execute ps command from operating system
                   contents = command.read()                     #read the output
@@ -228,7 +207,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                   self.request.sendall(bytearray("\n",  "utf-8")) #write output to the server
                   continue
 
-                #who
+                # who
                if data.strip() == "who":
                   command = os.popen("who")          #execute cat command from operating system
                   contents = command.read()                     #read the output
@@ -244,7 +223,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                if data.strip() == "off":
                   print("Terminating myself...")
                   self.request.sendall(bytearray("Terminating myself...So long\n", "utf-8"))
-                  os._exit(1)                                                       #exit without ptinting traceback
+                  os._exit(1)                                                       #exit without printing traceback
                 
                # end of all commands, everything else don't understand
                else:
@@ -255,7 +234,7 @@ if __name__ == "__main__":
    HOST, PORT = "localhost", int(sys.argv[1])
    server = socketserver.TCPServer((HOST, PORT), MyTCPHandler)
    print("backdoor listening on port ", PORT)
-   file_hash = {}
+   file_hash = {}   # hash for snap to stay alive even through logout
    server.serve_forever()
   
    
