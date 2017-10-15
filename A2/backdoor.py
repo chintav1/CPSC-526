@@ -164,20 +164,20 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
 
                    # check differences
                    for path in file_hash.keys():
-                  
+
                        # if in old but not new, deleted
                        if ((path in file_hash.keys()) and (path not in file_hash2.keys())):
-                           self.request.sendall(bytearray(path + " - was deleted\n", "utf-8"))
+                           self.request.sendall(bytearray(path.split("/")[len(path.split("/")) - 1] + " - was deleted\n", "utf-8"))
                          
                       # if present in both, check hash, if hashes differ, it was changed
                        if ((path in file_hash2.keys()) and (path in file_hash.keys())):  
                           if file_hash.get(path) != file_hash2.get(path):
-                               self.request.sendall(bytearray(path + " - was changed\n", "utf-8"))
+                               self.request.sendall(bytearray(path.split("/")[len(path.split("/")) - 1] + " - was changed\n", "utf-8"))
                          
                    # check paths in new; if in new and not old, added     
                    for path in file_hash2.keys():
                        if ((path in file_hash2.keys()) and (path not in file_hash.keys())):
-                           self.request.sendall(bytearray(path + " - was added\n", "utf-8"))
+                           self.request.sendall(bytearray(path.split("/")[len(path.split("/")) - 1] + " - was added\n", "utf-8"))
                    continue
 
                 # help [cmd]
@@ -189,7 +189,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                       for cmd in descriptions.keys():
                           self.request.sendall(bytearray(cmd + "\n", "utf-8"))
                   
-                  # if wanted more detailed help
+                  # if more detailed help wanted
                   elif len(data.split()) == 2:
                       command = descriptions.get(data.split()[1])
                       self.request.sendall(bytearray(command + "\n", "utf-8"))
