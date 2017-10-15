@@ -152,7 +152,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                   contents = command.read()
                   contents = contents.splitlines()
 
-                  # create hash to be stored
+                  # create hash to be stored (Sources: http://pythoncentral.io/hashing-files-with-python/, http://pythoncentral.io/hashing-strings-with-python/)
                   global hasher
                   for path in contents:
                        if os.path.isfile(path):
@@ -181,7 +181,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                    
                    diff_hash = {}                                                  #new dictionary to be used for diff
                    
-                   # create hash to be compared with snap's hash
+                   # create hash to be compared with snap's hash ((Sources: http://pythoncentral.io/hashing-files-with-python/, http://pythoncentral.io/hashing-strings-with-python/))
                    for path in contents:
                        if os.path.isfile(path):
                            with open(path, 'rb') as afile:
