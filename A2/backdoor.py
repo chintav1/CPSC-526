@@ -112,11 +112,6 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                       self.request.sendall(bytearray("bad request\n", "utf-8"))
                     continue 
 
-
-
-
-                  
-
                
                 #commands with two mandatory arguments 
                if len(data.split()) == 3:
