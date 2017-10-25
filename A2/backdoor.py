@@ -214,7 +214,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                   
                   # if more detailed help wanted
                   elif len(data.split()) == 2:
-                      command = descriptions.get(data.split()[1])
+                      command = descriptions.get(data.split()[1], "")
                       self.request.sendall(bytearray(command + "\n", "utf-8"))
                   
                   else:                                     
