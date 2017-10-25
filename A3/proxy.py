@@ -3,16 +3,17 @@ import socket,threading
 import sys
 
 class MyTCPHandler(socketserver.BaseRequestHandler):
-
+    
+    
+    LOG_OPT = sys.argv[len(sys.argv) - 4]
+    SRC_PORT = int(sys.argv[len(sys.argv) - 3])
+    SERVER = sys.argv[len(sys.argv) - 2]
+    DST_PORT = int(sys.argv[len(sys.argv) - 1])
 	
-	LOG_OPT = sys.argv[len(sys.argv) - 4]
-	SRC_PORT = int(sys.argv[len(sys.argv) - 3])
-	SERVER = sys.argv[len(sys.argv) - 2]
-	DST_PORT = int(sys.argv[len(sys.argv) - 1])
-	
 
-	print("Port logger running: srcPort = ",SRC_PORT, "host = ",SERVER, "dstPort = ",DST_PORT)
+    print("Port logger running: srcPort = ",SRC_PORT, "host = ",SERVER, "dstPort = ",DST_PORT)
 
+	server
 if __name__ == "__main__":
    
    HOST,SRC_PORT = "localhost", int(sys.argv[len(sys.argv) - 3])
