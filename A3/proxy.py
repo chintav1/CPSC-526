@@ -1,6 +1,7 @@
 import socketserver
 import socket,threading
 import sys
+import urllib.request
 
 class MyTCPHandler(socketserver.BaseRequestHandler):
     
@@ -24,11 +25,13 @@ if __name__ == "__main__":
    server = socketserver.ThreadingTCPServer((HOST, SRC_PORT), MyTCPHandler)
    server.serve_forever()
 
-# what change?
+
 
 # for the HTTP response
 # response = urllib.request.urlopen(url)
-# self.request.sendall(bytearray("New connection: ", "UTF-8"))
-# self.request.sendall(bytearray(response.getheader("Date"), "UTF-8"))
-# self.request.sendall(bytearray(" from ", "UTF-8"))
+
+# For when new connection comes
+# date = response.getheader("Date")     # record the date/time when connection was initiated
+# sourceip = ""                         # source ip of originating connection
+# print("New connection: ", Date, " from
 # response.getheader()  # I think this should work?
