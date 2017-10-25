@@ -1,7 +1,6 @@
 import socketserver
 import socket,threading
 import sys
-import urllib.request
 
 
 
@@ -15,18 +14,23 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
 	
 
     print("Port logger running: srcPort = ",SRC_PORT, "host = ",SERVER, "dstPort = ",DST_PORT)
+
     socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     socket.connect((SERVER, DST_PORT))
 
 	
+
+    
+        
+
+
 if __name__ == "__main__":
    
     HOST,SRC_PORT = "localhost", int(sys.argv[len(sys.argv) - 3])
-  
-
-    
     server = socketserver.ThreadingTCPServer((HOST, SRC_PORT), MyTCPHandler)
     server.serve_forever()
+
+   
 
 
 
