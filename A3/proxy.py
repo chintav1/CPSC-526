@@ -19,12 +19,12 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
     server_socket.bind(("localhost", SRC_PORT))
     server_socket.listen(0)
 
-    print("here")
+    
     connection, s = server_socket.accept()
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((SERVER, DST_PORT))
 
-    print("another ssshere")
+    
 
     while True:
         data = connection.recv(1024)
@@ -52,11 +52,3 @@ if __name__ == "__main__":
 
 
 
-# for the HTTP response
-# response = urllib.request.urlopen(url)
-
-# For when new connection comes
-# date = response.getheader("Date")     # record the date/time when connection was initiated
-# sourceip = ""                         # source ip of originating connection
-# print("New connection: ", Date, " from
-# response.getheader()  # I think this should work?
