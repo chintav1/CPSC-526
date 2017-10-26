@@ -15,8 +15,26 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
 
     print("Port logger running: srcPort = ",SRC_PORT, "host = ",SERVER, "dstPort = ",DST_PORT)
 
-    socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    socket.connect((SERVER, DST_PORT))
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind(("localhost", SRC_PORT))
+    server_socket.listen(0)
+
+    print("here")
+    connection, s = server_socket.accept()
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client_socket.connect((SERVER, DST_PORT))
+
+    print("another ssshere")
+
+    while True:
+        data = connection.recv(1024)
+        client_socket.send(data)
+        sys.stdout.buffer.write(data)
+        data = client_socket.recv(1024)
+        connection.send(data)
+        sys.stdout.buffer.write(data)
+
+    
 
 	
 
