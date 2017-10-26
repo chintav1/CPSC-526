@@ -25,14 +25,30 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
     client_socket.connect((SERVER, DST_PORT))
 
     
+    data = ""
 
     while True:
+        # sending data
         data = connection.recv(1024)
         client_socket.send(data)
-        sys.stdout.buffer.write(data)
+        
+        dataDecoded = data.decode("utf-8")
+        dataLines = dataDecoded.split("\r\n\r\n")
+
+        for dataLine in dataLines[0].split("\n"):
+            print("<-- ", dataLine)
+
+        # receiving data
         data = client_socket.recv(1024)
         connection.send(data)
-        sys.stdout.buffer.write(data)
+        
+        dataDecoded = data.decode("utf-8")
+        dataLines = dataDecoded.split("\r\n\r\n")
+
+        for dataLine in dataLines[0].split("\n"):
+            print("--> ", dataLine)
+      
+        break;
 
     
 
