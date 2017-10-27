@@ -7,7 +7,6 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
 
 
     LOG_OPT = sys.argv[1]       # options will always be last
-
     SRC_PORT = int(sys.argv[len(sys.argv) - 3])
     SERVER = sys.argv[len(sys.argv) - 2]
     DST_PORT = int(sys.argv[len(sys.argv) - 1])
@@ -61,6 +60,17 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                 break
 
 
+        # replace
+        serverLines = dataServerLines[0]
+        for i, args in enumerate(sys.argv):
+            if args == "-replace":
+                replaceFrom = sys.argv[i+1]
+                replaceTo = sys.argv[i+2]
+                for word in dataServerLines[0].split():
+                    if word == replaceFrom:
+                        serverLines = serverLines.replace(replaceFrom, replaceTo)
+                print(serverLines)
+                sys.stdout.flush()
 
 
         # raw
@@ -68,24 +78,23 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
             # print data sent by server
             for dataServerLine in dataServerLines[0].split("\n"):
                 print("--> ", dataServerLine)
-
             # print data received from client
             for dataClientLine in dataClientLines[0].split("\n"):
                 print("<-- ", dataClientLine)
 
 
         # strip
-        # TODO: WHAT EXACTLY ARE THE PRINTABLE CHARACTERS? It seems all it shows are printable
+        # TODO: Removes newlines???? Should it be doing that?
         lines = dataClientLines[0]
         if LOG_OPT == "-strip":
             # start with server
-            for i, char in enumerate(dataClientLines[0]):
+            for char in dataClientLines[0]:
                 if not char.isprintable():
-                    lines.replace(char, ".")
+                    lines = lines.replace(char, ".")
             print(lines)
             sys.stdout.flush()
 
-            
+
 
 
 
