@@ -84,10 +84,19 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
 
 
         # strip
-        # TODO: Removes newlines???? Should it be doing that?
-        lines = dataClientLines[0]
+        # TODO: Please look at the difference when printing server's from printing client's
         if LOG_OPT == "-strip":
-            # start with server
+            # print out server
+            lines = dataServerLines[0]
+            dSL = dataServerLines[0].split("\r\n")
+            for char in dSL:
+                if not char.isprintable():
+                    lines = lines.replace(char, ".")
+            print(lines)
+            sys.stdout.flush()
+
+            # print out client
+            lines = dataClientLines[0]
             for char in dataClientLines[0]:
                 if not char.isprintable():
                     lines = lines.replace(char, ".")
@@ -95,7 +104,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
             sys.stdout.flush()
 
 
-
+        # hex
 
 
 
