@@ -1,7 +1,7 @@
 import socketserver
 import socket,threading
 import sys
-
+import binascii
 
 class MyTCPHandler(socketserver.BaseRequestHandler):
 
@@ -105,6 +105,13 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
 
 
         # hex
+        if LOG_OPT == "-hex":
+            s = dataServerLines[0].split("\r\n")
+            for lines in s:
+                binline = binascii.a2b_qp(lines)
+                hexline = binascii.hexlify(binline)
+                print(hexline)
+            sys.stdout.flush()
 
 
 
