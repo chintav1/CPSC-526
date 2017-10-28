@@ -7,11 +7,13 @@ import time
 def hexOption(s, arrows):
     i = 0
     j = 0
+    padding = 0
     ending = ""
     for n, chars in enumerate(s):
         if i == 0:
             # print the number of bytes printed
             print(arrows, "%010d" % j, end="  ")
+            padding = 15
             sys.stdout.flush()
         i = i + 1
         # print the hex
@@ -19,8 +21,10 @@ def hexOption(s, arrows):
         hexline = binascii.hexlify(binline)
         if chars == "=":
             print("3D", end="")
+            padding = padding + 2
         else:
             sys.stdout.buffer.write(hexline)
+            padding = padding + len(hexline)
         sys.stdout.flush()
         # add another character for this line
         ending = ending + chars
@@ -28,28 +32,26 @@ def hexOption(s, arrows):
             # split hexes
             print("  ", end="")
             sys.stdout.flush()
+            padding = padding + 2
         if i == 16 or n == (len(s)-1):
             # write 3rd part, then new line
             j = j + 16
             ending = "  |" + ending + "|"
-            # check if hex ends when i is not 16, if it does then extra padding
-            if n == (len(s)-1):
-                align = 70 - ((i*2) + ((i-1)*2) + 16)
-                m = 0
-                while m < align:
-                    print(" ", end="")
-                    m = m + 1
-                print(ending)
-            else:
-                print(ending)
+            # add padding if needed for ending to align
+            m = 0
+            align = 64 - padding
+            while m < align:
+                print(" ", end="")
+                m = m + 1
+            print(ending)
             sys.stdout.flush()
             ending = ""        # reset endline for new line
             i = 0
-            # 32+14+4+10+5
         else:
             # put space between hexes
             print(" ", end="")
             sys.stdout.flush()
+            padding = padding + 1
 
 class MyTCPHandler(socketserver.BaseRequestHandler):
 
@@ -58,8 +60,6 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
     SRC_PORT = int(sys.argv[len(sys.argv) - 3])
     SERVER = sys.argv[len(sys.argv) - 2]
     DST_PORT = int(sys.argv[len(sys.argv) - 1])
-
-
 
     print("Port logger running: srcPort=",SRC_PORT, "host=",SERVER, "dstPort=",DST_PORT)
 
@@ -103,13 +103,16 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         wdayDict = {0:"Mon", 1:"Tue", 2:"Wed", 3:"Thur", 4:"Fri", 5:"Sat", 6:"Sun"}
         wday = wdayDict[dt[6]]
 
-        print("New connection: " + wday +" "+ month +" "+ day +" "+ hour+":"+minute+":"+sec+", from", end="")
+        print("\r\nNew connection: " + wday +" "+ month +" "+ day +" "+ hour+":"+minute+":"+sec+", from", end=" ")
 
         # get the host
         for dataServerLine in dataServerLines[0].split("\n"):
-            if dataServerLine.split(None, 1)[0] == "Host:":
-                dataServerLine = dataServerLine.split("Host:", 2)[1]
-                print(dataServerLine.split(":",1)[0])
+            if len(dataServerLine) > 1:
+                if dataServerLine.split(None, 1)[0] == "Host:":
+                    dataServerLine = dataServerLine.split("Host:", 2)[1]
+                    print(dataServerLine.split(":",1)[0])
+            else:
+                print(SERVER)
                 break
 
 
@@ -137,7 +140,6 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
 
 
         # strip
-        # TODO: Please look at the difference when printing server's from printing client's
         if LOG_OPT == "-strip":
             # print out server
             lines = dataServerLines[0]
@@ -145,25 +147,37 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
             for char in dSL:
                 if not char.isprintable():
                     lines = lines.replace(char, ".")
-            print(lines)
+            for line in lines.split("\n"):
+                print("--> ", line)
             sys.stdout.flush()
 
+            lines = dataClientLines[0]
+            dCL = dataClientLines[0].split("\r\n")
+            for char in dCL:
+                if not char.isprintable():
+                    lines = lines.replace(char, ".")
+            for line in lines.split("\n"):
+                print("<-- ", line)
+            sys.stdout.flush()
+
+            # I don't think this version is correct?
+            '''
             # print out client
             lines = dataClientLines[0]
             for char in dataClientLines[0]:
                 if not char.isprintable():
                     lines = lines.replace(char, ".")
-            print(lines)
+            print("<--", lines)
             sys.stdout.flush()
-
+            '''
 
         # hex
         if LOG_OPT == "-hex":
             s = dataServerLines[0].replace("\r\n", "")
-            hexOption(s, "<-- ")
+            hexOption(s, "--> ")
             print("")
             s = dataClientLines[0].replace("\r\n", "")
-            hexOption(s, "--> ")
+            hexOption(s, "<-- ")
 
         #autoN
         if LOG_OPT.startswith("-auto"):
