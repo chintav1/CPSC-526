@@ -154,17 +154,27 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         # hex
         if LOG_OPT == "-hex":
             s = dataServerLines[0].replace("\r\n", "")
-            hexOption(s, "<-- ")
+            hexOption(s, "--> ")
             print("")
             s = dataClientLines[0].replace("\r\n", "")
-            hexOption(s, "--> ")
+            hexOption(s, "<-- ")
 
         #autoN
         if LOG_OPT.startswith("-auto"):
             bytes = LOG_OPT.lstrip("-auto")
             try:
                 n = int(bytes)
-                print(n)
+                s = dataServerLines[0]
+                counter = 0
+
+                char_list = list(s)
+
+                while(counter < n):
+                    
+
+
+
+
             except:
                 print("autoN: N must be an integetr")
                 os._exit(1)
