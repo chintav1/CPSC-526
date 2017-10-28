@@ -2,6 +2,7 @@ import socketserver
 import socket,threading
 import sys, os
 import binascii
+import time
 
 def hexOption(s, arrows):
     i = 0
@@ -90,15 +91,20 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         dataClientLines = dataClientDecoded.split("\r\n\r\n")
 
         # print new connection received
-        print("New connection: ", end='')
-        # get time from client
-        # TODO: fix date
-        for dataClientLine in dataClientLines[0].split("\n"):
-            if dataClientLine.split(None, 1)[0] == "Date:":
-                dataClientLine = dataClientLine.split("Date: ", 2)[1]
-                print(dataClientLine.split(" GMT", 1)[0], end='')
-                break
-        print(", from", end='')
+        # get time
+        dt = time.localtime()
+        year = str(dt[0])
+        monthDict = {1:"Jan", 2:"Feb", 3:"Mar", 4:"Apr", 5:"May", 6:"Jun", 7:"Jul", 8:"Aug", 9:"Sep", 10:"Oct", 11:"Nov", 12:"Dec"}
+        month = monthDict[dt[1]]
+        day = str(dt[2])
+        hour = str(dt[3])
+        minute = str(dt[4])
+        sec = str(dt[5])
+        wdayDict = {0:"Mon", 1:"Tue", 2:"Wed", 3:"Thur", 4:"Fri", 5:"Sat", 6:"Sun"}
+        wday = wdayDict[dt[6]]
+
+        print("New connection: " + wday +" "+ month +" "+ day +" "+ hour+":"+minute+":"+sec+", from", end="")
+
         # get the host
         for dataServerLine in dataServerLines[0].split("\n"):
             if dataServerLine.split(None, 1)[0] == "Host:":
