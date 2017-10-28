@@ -3,6 +3,53 @@ import socket,threading
 import sys
 import binascii
 
+def hexOption(s, arrows):
+    i = 0
+    j = 0
+    ending = ""
+    for n, chars in enumerate(s):
+        if i == 0:
+            # print the number of bytes printed
+            print(arrows, "%010d" % j, end="  ")
+            sys.stdout.flush()
+        i = i + 1
+        # print the hex
+        binline = binascii.a2b_qp(chars)
+        hexline = binascii.hexlify(binline)
+        if chars == "=":
+            print("3D", end="")
+        else:
+            sys.stdout.buffer.write(hexline)
+        sys.stdout.flush()
+        # add another character for this line
+        ending = ending + chars
+        if i == 8:
+            # split hexes
+            print("  ", end="")
+            sys.stdout.flush()
+        if i == 16 or n == (len(s)-1):
+            # write 3rd part, then new line
+            j = j + 16
+            ending = "  |" + ending + "|"
+            # check if hex ends when i is not 16, if it does then extra padding
+            if n == (len(s)-1):
+                align = 70 - ((i*2) + ((i-1)*2) + 16)
+                m = 0
+                while m < align:
+                    print(" ", end="")
+                    m = m + 1
+                print(ending)
+            else:
+                print(ending)
+            sys.stdout.flush()
+            ending = ""        # reset endline for new line
+            i = 0
+            # 32+14+4+10+5
+        else:
+            # put space between hexes
+            print(" ", end="")
+            sys.stdout.flush()
+
 class MyTCPHandler(socketserver.BaseRequestHandler):
 
 
@@ -106,46 +153,14 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
 
         # hex
         if LOG_OPT == "-hex":
-            abc = dataClientLines[0].replace("\r\n", "")
-            hex(s)
+            s = dataServerLines[0].replace("\r\n", "")
+            hexOption(s, "<-- ")
+            print("")
+            s = dataClientLines[0].replace("\r\n", "")
+            hexOption(s, "--> ")
 
-def hex(s):
-    i = 0
-    j = 0
-    ending = ""
-    for n, chars in enumerate(s):
-        if i == 0:
-            # print the number of bytes printed
-            print("%010d" % j, end="  ")
-            sys.stdout.flush()
-        i = i + 1
-        # print the hex
-        binline = binascii.a2b_qp(chars)
-        hexline = binascii.hexlify(binline)
-        sys.stdout.buffer.write(hexline)
-        sys.stdout.flush()
-        # add another character for this line
-        ending = ending + chars
-        if i == 8:
-            # split hexes
-            print("  ", end="")
-            sys.stdout.flush()
-        if i == 16 or n == (len(s)-1):
-            # write 3rd part, then new line
-            j = j + 16
-            ending = "|" + ending + "|"
-            if n == (len(s)-1):
-                print("%44s" % (ending))
-            else:
-                print("  " + ending)
-            sys.stdout.flush()
-            ending = ""        # reset endline for new line
-            i = 0
-            # 26 + 16 = 42
-        else:
-            # put space between hexes
-            print(" ", end="")
-            sys.stdout.flush()
+
+
 
 
 
