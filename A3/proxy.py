@@ -1,6 +1,6 @@
 import socketserver
 import socket,threading
-import sys
+import sys, os
 import binascii
 
 def hexOption(s, arrows):
@@ -158,6 +158,17 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
             print("")
             s = dataClientLines[0].replace("\r\n", "")
             hexOption(s, "--> ")
+
+        #autoN
+        if LOG_OPT.startswith("-auto"):
+            bytes = LOG_OPT.lstrip("-auto")
+            try:
+                n = int(bytes)
+                print(n)
+            except:
+                print("autoN: N must be an integetr")
+                os._exit(1)
+
 
 
 
