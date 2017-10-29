@@ -128,13 +128,13 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
             # print data sent by server
             for dataServerLine in dataServerLines[0].split("\n"):
                 if replace:
-                    output = output + "--> " + dataServerLine
+                    output = output + "--> " + str(dataServerLine)
                 else:
                     print("--> ", dataServerLine)
             # print data received from client
             for dataClientLine in dataClientLines[0].split("\n"):
                 if replace:
-                    output += "<-- " + str(dataClientLine)
+                    output = output + "<-- " + str(dataClientLine)
                 else:
                     print("<-- ", dataClientLine)
 
@@ -147,7 +147,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                 replaceTo = sys.argv[i+2]
                 for word in output.split():
                     if word == replaceFrom:
-                        newOutput += newOutput.replace(replaceFrom, replaceTo)
+                        newOutput = output + newOutput.replace(replaceFrom, replaceTo)
                 print(newOutput)
                 sys.stdout.flush()
                 if newOutput == "":
