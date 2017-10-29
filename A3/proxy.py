@@ -190,15 +190,15 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
 
             char_list = list(s)
 
-            while(current_position < len(char_list)):
-                print(repr(''.join(char_list[current_position:n])))
+            while(current_position < len(s)):
+                print(repr(''.join(s[current_position:n]))[1:-1])
                 current_position = current_position + n
                 n = n + n
 
-                
-               
 
-                
+
+
+
 
 
 
