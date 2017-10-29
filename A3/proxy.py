@@ -84,12 +84,20 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
     replace = False
     output = [""]
     LOG_OPT = sys.argv[1]       # options will always be last
-    SRC_PORT = int(sys.argv[len(sys.argv) - 3])
-    SERVER = sys.argv[len(sys.argv) - 2]
-    DST_PORT = int(sys.argv[len(sys.argv) - 1])
+    
     for i, args in enumerate(sys.argv):
         if args == "-replace":
             replace = True
+
+    if "-replace" in sys.argv:
+        SRC_PORT = int(sys.argv[len(sys.argv) - 6])
+        SERVER = sys.argv[len(sys.argv) - 2]
+        DST_PORT = int(sys.argv[len(sys.argv) - 1])
+    
+    else:
+        SRC_PORT = int(sys.argv[len(sys.argv) - 3])
+        SERVER = sys.argv[len(sys.argv) - 2]
+        DST_PORT = int(sys.argv[len(sys.argv) - 1])
 
     print("Port logger running: srcPort=",SRC_PORT, "host=",SERVER, "dstPort=",DST_PORT)
 
