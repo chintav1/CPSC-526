@@ -55,11 +55,15 @@ def hexOption(s, arrows):
 
 class MyTCPHandler(socketserver.BaseRequestHandler):
 
-
+    replace = False
+    output = ""
     LOG_OPT = sys.argv[1]       # options will always be last
     SRC_PORT = int(sys.argv[len(sys.argv) - 3])
     SERVER = sys.argv[len(sys.argv) - 2]
     DST_PORT = int(sys.argv[len(sys.argv) - 1])
+    for i, args in enumerate(sys.argv):
+        if args == "-replace":
+            replace = True
 
     print("Port logger running: srcPort=",SRC_PORT, "host=",SERVER, "dstPort=",DST_PORT)
 
@@ -116,28 +120,39 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                 break
 
 
-        # replace
-        serverLines = dataServerLines[0]
-        for i, args in enumerate(sys.argv):
-            if args == "-replace":
-                replaceFrom = sys.argv[i+1]
-                replaceTo = sys.argv[i+2]
-                for word in dataServerLines[0].split():
-                    if word == replaceFrom:
-                        serverLines = serverLines.replace(replaceFrom, replaceTo)
-                print(serverLines)
-                sys.stdout.flush()
+
 
 
         # raw
         if LOG_OPT == "-raw":
             # print data sent by server
             for dataServerLine in dataServerLines[0].split("\n"):
-                print("--> ", dataServerLine)
+                if replace:
+                    output = output + "--> " + dataServerLine
+                else:
+                    print("--> ", dataServerLine)
             # print data received from client
             for dataClientLine in dataClientLines[0].split("\n"):
-                print("<-- ", dataClientLine)
+                if replace:
+                    output += "<-- " + str(dataClientLine)
+                else:
+                    print("<-- ", dataClientLine)
 
+
+        # replace
+        newOutput = ""
+        for i, args in enumerate(sys.argv):
+            if args == "-replace":
+                replaceFrom = sys.argv[i+1]
+                replaceTo = sys.argv[i+2]
+                for word in output.split():
+                    if word == replaceFrom:
+                        newOutput += newOutput.replace(replaceFrom, replaceTo)
+                print(newOutput)
+                sys.stdout.flush()
+                if newOutput == "":
+                    print(output)
+                    sys.stdout.flush()
 
         # strip
         if LOG_OPT == "-strip":
@@ -188,15 +203,15 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                 current_position = 0
 
 
-            while(current_position < len(s)):
-                print(repr(''.join(s[current_position:n]))[1:-1])
-                current_position = current_position + n
-                n = n + n 
+            #while(current_position < len(s)):
+            #    print(repr(''.join(s[current_position:n]))[1:-1])
+            #    current_position = current_position + n
+            #    n = n + n
 
-                while(current_position < len(s)):
-                    print("-->", repr(''.join(s[current_position:n]))[1:-1])
-                    current_position = current_position + n
-                    n = n + n
+            #    while(current_position < len(s)):
+            #        print("-->", repr(''.join(s[current_position:n]))[1:-1])
+            #        current_position = current_position + n
+            #        n = n + n
 
 
 
