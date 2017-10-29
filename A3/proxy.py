@@ -168,32 +168,24 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         #autoN
         if LOG_OPT.startswith("-auto"):
             bytes = LOG_OPT.lstrip("-auto")
-            #try:
-            n = int(bytes)
-            s = dataServerLines[0]
-            counter = 0
-            current_position = 0
+            try:
+                n = int(bytes)
+                s = dataServerLines[0]
+                current_position = 0
 
-            char_list = list(s)
+          
 
-            while(current_position < len(char_list)):
-                print(repr(''.join(char_list[current_position:n])))
-                current_position = current_position + n
-                n = n + n
-
-                
-               
-
+                while(current_position < len(s)):
+                    print("-->", repr(''.join(s[current_position:n]))[1:-1])
+                    current_position = current_position + n
+                    n = n + n
                 
 
 
 
-
-
-
-            '''except:
+            except:
                 print("autoN: N must be an integer")
-                os._exit(1)'''
+                os._exit(1)
 
 
 
