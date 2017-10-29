@@ -4,34 +4,49 @@ import sys, os
 import binascii
 import time
 
-def hexOption(s, arrows):
+def hexOption(s, arrows, replace):
     i = 0
     j = 0
     padding = 0
     ending = ""
+    output = [""]
     for n, chars in enumerate(s):
         if i == 0:
             # print the number of bytes printed
-            print(arrows, "%010d" % j, end="  ")
+            if replace:
+                output.append(arrows + str("%010d" % j) + "  ")
+            else:
+                print(arrows, "%010d" % j, end="  ")
+                sys.stdout.flush()
             padding = 15
-            sys.stdout.flush()
+
         i = i + 1
         # print the hex
         binline = binascii.a2b_qp(chars)
         hexline = binascii.hexlify(binline)
         if chars == "=":
-            print("3D", end="")
+            if replace:
+                output.append("3D")
+            else:
+                print("3D", end="")
+                sys.stdout.flush()
             padding = padding + 2
         else:
-            sys.stdout.buffer.write(hexline)
+            if replace:
+                output.append(hexline.decode("ascii"))
+            else:
+                sys.stdout.buffer.write(hexline)
+                sys.stdout.flush()
             padding = padding + len(hexline)
-        sys.stdout.flush()
         # add another character for this line
         ending = ending + chars
         if i == 8:
             # split hexes
-            print("  ", end="")
-            sys.stdout.flush()
+            if replace:
+                output.append("  ")
+            else:
+                print("  ", end="")
+                sys.stdout.flush()
             padding = padding + 2
         if i == 16 or n == (len(s)-1):
             # write 3rd part, then new line
@@ -41,22 +56,33 @@ def hexOption(s, arrows):
             m = 0
             align = 64 - padding
             while m < align:
-                print(" ", end="")
+                if replace:
+                    output.append(" ")
+                else:
+                    print(" ", end="")
+                    sys.stdout.flush()
                 m = m + 1
-            print(ending)
-            sys.stdout.flush()
+            if replace:
+                output.append(ending + "\r\n")
+            else:
+                print(ending)
+                sys.stdout.flush()
             ending = ""        # reset endline for new line
             i = 0
         else:
             # put space between hexes
-            print(" ", end="")
-            sys.stdout.flush()
+            if replace:
+                output.append(" ")
+            else:
+                print(" ", end="")
+                sys.stdout.flush()
             padding = padding + 1
+    return output
 
 class MyTCPHandler(socketserver.BaseRequestHandler):
 
     replace = False
-    output = ""
+    output = [""]
     LOG_OPT = sys.argv[1]       # options will always be last
     SRC_PORT = int(sys.argv[len(sys.argv) - 3])
     SERVER = sys.argv[len(sys.argv) - 2]
@@ -128,31 +154,16 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
             # print data sent by server
             for dataServerLine in dataServerLines[0].split("\n"):
                 if replace:
-                    output = output + "--> " + str(dataServerLine)
+                    output.append("--> " + str(dataServerLine) + "\r\n")
                 else:
                     print("--> ", dataServerLine)
             # print data received from client
             for dataClientLine in dataClientLines[0].split("\n"):
                 if replace:
-                    output = output + "<-- " + str(dataClientLine)
+                    output.append("<-- " + str(dataClientLine) + "\r\n")
                 else:
                     print("<-- ", dataClientLine)
 
-
-        # replace
-        newOutput = ""
-        for i, args in enumerate(sys.argv):
-            if args == "-replace":
-                replaceFrom = sys.argv[i+1]
-                replaceTo = sys.argv[i+2]
-                for word in output.split():
-                    if word == replaceFrom:
-                        newOutput = output + newOutput.replace(replaceFrom, replaceTo)
-                print(newOutput)
-                sys.stdout.flush()
-                if newOutput == "":
-                    print(output)
-                    sys.stdout.flush()
 
         # strip
         if LOG_OPT == "-strip":
@@ -163,8 +174,11 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                 if not char.isprintable():
                     lines = lines.replace(char, ".")
             for line in lines.split("\n"):
-                print("--> ", line)
-            sys.stdout.flush()
+                if replace:
+                    output.append("--> " + str(line) + "\r\n")
+                else:
+                    print("--> ", line)
+                    sys.stdout.flush()
 
             lines = dataClientLines[0]
             dCL = dataClientLines[0].split("\r\n")
@@ -172,27 +186,24 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                 if not char.isprintable():
                     lines = lines.replace(char, ".")
             for line in lines.split("\n"):
-                print("<-- ", line)
-            sys.stdout.flush()
+                if replace:
+                    output.append("<-- " + str(line) + "\r\n")
+                else:
+                    print("<-- ", line)
+                    sys.stdout.flush()
 
-            # I don't think this version is correct?
-            '''
-            # print out client
-            lines = dataClientLines[0]
-            for char in dataClientLines[0]:
-                if not char.isprintable():
-                    lines = lines.replace(char, ".")
-            print("<--", lines)
-            sys.stdout.flush()
-            '''
 
         # hex
         if LOG_OPT == "-hex":
             s = dataServerLines[0].replace("\r\n", "")
-            hexOption(s, "--> ")
-            print("")
+            output1 = hexOption(s, "--> ", replace)
+            if replace:
+                output1.append("\r\n")
+            else:
+                print("")
             s = dataClientLines[0].replace("\r\n", "")
-            hexOption(s, "<-- ")
+            output2 = hexOption(s, "<-- ", replace)
+            output = output1 + output2
 
         #autoN
         if LOG_OPT.startswith("-auto"):
@@ -205,23 +216,48 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                 current_position = 0
 
                 while(current_position < len(s)):
-                    print("-->", repr(''.join(s[current_position:n]))[1:-1])
+                    if replace:
+                        output.append("--> ")
+                        output.append(repr(''.join(s[current_position:n]))[1:-1])
+                        output.append("\r\n")
+                    else:
+                        print("--> ", repr(''.join(s[current_position:n]))[1:-1])
                     current_position = current_position + nOriginal
                     n = n + nOriginal
-
-                print("")
+                if replace:
+                    output.append("\r\n")
+                else:
+                    print("")
                 current_position = 0                        #reset current position for client side
                 n = int(bytes)                              #reset n
 
                 while(current_position < len(c)):
-                    print("<--", repr(''.join(c[current_position:n]))[1:-1])
+                    if replace:
+                        output.append("<-- ")
+                        output.append(repr(''.join(c[current_position:n]))[1:-1])
+                        output.append("\r\n")
+                    else:
+                        print("<-- ", repr(''.join(c[current_position:n]))[1:-1])
                     current_position = current_position + nOriginal
                     n = n + nOriginal
 
             except:
+                print(sys.exc_info())
                 print("autoN: N must be an integer")
                 os._exit(1)
 
+
+        # replace
+        newOutput = "".join(output)
+        for i, args in enumerate(sys.argv):
+            if args == "-replace":
+                replaceFrom = sys.argv[i+1]
+                replaceTo = sys.argv[i+2]
+                for word in newOutput.split():
+                    if word == replaceFrom:
+                        newOutput = newOutput.replace(replaceFrom, replaceTo)
+                print(newOutput)
+                sys.stdout.flush()
 
 
 
