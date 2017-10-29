@@ -185,18 +185,26 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
             try:
                 n = int(bytes)
                 s = dataServerLines[0]
+                c = dataClientLines[0]
                 current_position = 0
 
-
-            while(current_position < len(s)):
-                print(repr(''.join(s[current_position:n]))[1:-1])
-                current_position = current_position + n
-                n = n + n 
-
+                print(list(s))
+                
                 while(current_position < len(s)):
                     print("-->", repr(''.join(s[current_position:n]))[1:-1])
                     current_position = current_position + n
+                    n = n + n 
+
+                print("")
+                current_position = 0                        #reset current position for client side
+                n = int(bytes)                              #reset n
+
+                while(current_position < len(c)):
+                    print("<--", repr(''.join(c[current_position:n]))[1:-1])
+                    current_position = current_position + n
                     n = n + n
+
+
 
 
 
