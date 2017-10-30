@@ -106,12 +106,13 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
 
         # sending data
         dataServer = connection.recv(1024)
-        client_socket.send(dataServer)
+        #client_socket.send(dataServer)
+        sendthis = 'GET / HTTP/1.1\r\nHost: ' + SERVER + '\r\n\r\n'
+        client_socket.send(bytearray(sendthis, "UTF-8"))
 
         # receiving data
         dataClient = client_socket.recv(1024)
         connection.send(dataClient)
-
         # decode server data
         dataServerDecoded = dataServer.decode("utf-8")
         dataServerLines = dataServerDecoded.split("\r\n\r\n")
