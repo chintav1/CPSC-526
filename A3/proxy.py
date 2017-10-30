@@ -81,6 +81,8 @@ def hexOption(s, arrows, replace):
 
 class MyTCPHandler(socketserver.BaseRequestHandler):
 
+
+
     replace = False
     output = [""]
     LOG_OPT = sys.argv[1]       # options will always be last
@@ -103,6 +105,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
 
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind(("localhost", SRC_PORT))
+
     server_socket.listen(0)
 
     # listen for new connections
@@ -177,20 +180,24 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         if LOG_OPT == "-strip":
             # print out server
             lines = dataServerLines[0]
-            dSL = dataServerLines[0].split("\r\n")
-            for char in dSL:
+            dSL = dataServerLines[0]
+            
+            #iterate through list of characters in the data and check if each one is printable
+            for char in list(dSL):                     
                 if not char.isprintable():
                     lines = lines.replace(char, ".")
             for line in lines.split("\n"):
                 if replace:
-                    output.append("--> " + str(line) + "\r\n")
+                    output.append("--> " + line + "\r\n")
                 else:
                     print("--> ", line)
                     sys.stdout.flush()
 
             lines = dataClientLines[0]
-            dCL = dataClientLines[0].split("\r\n")
-            for char in dCL:
+            dCL = dataClientLines[0]
+
+            #iterate through list of characters in the data and check if each one is printable
+            for char in list(dCL):
                 if not char.isprintable():
                     lines = lines.replace(char, ".")
             for line in lines.split("\n"):
