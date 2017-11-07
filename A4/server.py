@@ -55,13 +55,8 @@ while True:
     command = requests.split(";", 1)[0]
     filename = requests.split(";", 2)[1]
 
-
-    #IV = hashlib.sha256(bytearray(key+nonce+"IV", "utf-8")).digest()
-    #SK = hashlib.sha256(bytearray(key+nonce+"SK", "utf-8")).digest()
-
-    salt = os.urandom(16)
     # TODO: Make the length parsed from command line
-    kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=16, salt=salt, iterations=100000, backend=backend)
+    kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=16, salt=nonce, iterations=100000, backend=default_backend)
     IV = kdf.derive(bytearray(key+nonce+"IV", "UTF-8"))
     SK = kdf.derive(bytearray(key+nonce+"SK", "UTF-8"))
 
