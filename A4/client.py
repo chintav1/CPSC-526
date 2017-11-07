@@ -6,6 +6,8 @@ import string
 import hashlib
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 try:
     command = sys.argv[1]
@@ -50,6 +52,18 @@ challenge = clientSocket.recv(1024)
 
 cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend())
 decryptor = cipher.decryptor()
+
+# respond to challenge
+challenge = clientSocket.recv(1024)
+
+kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=16, salt=nonce, iterations=100000, backend=default_backend)
+IV = kdf.derive(bytearray(key+nonce+"IV", "UTF-8"))
+SK = kdf.derive(bytearray(key+nonce+"SK", "UTF-8"))
+
+
+cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend())
+decryptor = cipher.decryptor()
+>>>>>>> 05c58d7884d36d863f5543197afb31a094c00295
 answer = decryptor.update(challenge) + decryptor.finalize()
 clientSocket.send(answer)
 

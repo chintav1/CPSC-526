@@ -69,9 +69,13 @@ while True:
 
     #connection.send(bytearray("OK", "UTF-8"))
     # send challenge
+    padder = padding.PKCS7(128).padder()
     secretmsg = "there is no spoon"
+    padding = padder.update(bytearray(secretmsg)) + padder.finalize()
+
     cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend)
     encryptor = cipher.encryptor()
+
     ciphertext = encryptor.update(bytearray(secretmsg, "utf-8")) + encryptor.finalize()
     connection.send(ciphertext)
 
