@@ -6,6 +6,8 @@ import hashlib
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import padding
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 def getTime():
     # get time
@@ -54,8 +56,13 @@ while True:
     filename = requests.split(";", 2)[1]
 
 
-    IV = hashlib.sha256(bytearray(key+nonce+"IV", "utf-8")).digest()
-    SK = hashlib.sha256(bytearray(key+nonce+"SK", "utf-8")).digest()
+    #IV = hashlib.sha256(bytearray(key+nonce+"IV", "utf-8")).digest()
+    #SK = hashlib.sha256(bytearray(key+nonce+"SK", "utf-8")).digest()
+
+    salt = os.urandom(16)
+    # TODO: Make the length parsed from command line
+    kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=16, salt=salt, iterations=100000, backend=backend)
+    SK = kdf.derive(bytearray(key+nonce+"IV", "UTF-8"))
 
     # logging
     print(getTime()+"New connection from "+str(ip)+" cipher="+cipher)
