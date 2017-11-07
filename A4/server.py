@@ -3,6 +3,9 @@ import sys, os
 import cryptography
 import time
 import hashlib
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import padding
 
 def getTime():
     # get time
@@ -43,17 +46,16 @@ while True:
     nonce = message.split(";", 2)[1]
     connection.send(bytearray("OK", "UTF-8"))
 
-    # authentication
-    # send challenge
 
-    # send requests
+    # get requests
     requests = connection.recv(1024)
     requests = requests.decode("utf-8")
     command = requests.split(";", 1)[0]
     filename = requests.split(";", 2)[1]
 
-    IV = hashlib.sha256((key+nonce+"IV").encode("utf-8")).hexdigest()
-    SK = hashlib.sha256((key+nonce+"SK").encode("utf-8")).hexdigest()
+
+    IV = hashlib.sha256(bytearray(key+nonce+"IV", "utf-8")).digest()
+    SK = hashlib.sha256(bytearray(key+nonce+"SK", "utf-8")).digest()
 
     # logging
     print(getTime()+"New connection from "+str(ip)+" cipher="+cipher)
@@ -62,7 +64,24 @@ while True:
     print(getTime()+"SK="+str(SK))
     print(getTime()+"command:"+command+", filename:"+filename)
 
-    connection.send(bytearray("OK", "UTF-8"))
+    #connection.send(bytearray("OK", "UTF-8"))
+    # send challenge
+    secretmsg = "there is no spoon"
+    cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend)
+    encryptor = cipher.encryptor()
+    ciphertext = encryptor.update(bytearray(secretmsg, "utf-8")) + encryptor.finalize()
+    connection.send(ciphertext)
+
+    # receive response from client
+    answer = (connection.recv(1024)).decode("utf-8")
+    # check answer
+    if answer == secretmsg:
+        print("Key is OK")
+        connection.send(bytearray("OK", "utf-8"))
+    else:
+        print("Key is not right, send wrong answer of " + answer)
+        connection.send(bytearray("bad key", "utf-8"))
+
 
     ####                          ####
     # client to download from server #
@@ -72,11 +91,11 @@ while True:
             with open(filename, "rb") as f:
                 connection.send(bytearray("OK", "utf-8"))
                 connection.recv(1024)
-                line = f.read(1024)
+                line = sys.stdin.buffer.read(1024)
                 while line:
                     print(getTime()+"sending:", repr(line))
                     connection.send(line)
-                    line = f.read(1024)
+                    line = sys.stdin.buffer.read(1024)
                 print(getTime()+"status: success")
             f.close()
         except FileNotFoundError:
