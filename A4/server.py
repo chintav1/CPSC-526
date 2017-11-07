@@ -59,9 +59,8 @@ while True:
     #IV = hashlib.sha256(bytearray(key+nonce+"IV", "utf-8")).digest()
     #SK = hashlib.sha256(bytearray(key+nonce+"SK", "utf-8")).digest()
 
-    salt = os.urandom(16)
     # TODO: Make the length parsed from command line
-    kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=16, salt=salt, iterations=100000, backend=backend)
+    kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=16, salt=nonce, iterations=100000, backend=default_backend)
     IV = kdf.derive(bytearray(key+nonce+"IV", "UTF-8"))
     SK = kdf.derive(bytearray(key+nonce+"SK", "UTF-8"))
 
@@ -74,9 +73,13 @@ while True:
 
     #connection.send(bytearray("OK", "UTF-8"))
     # send challenge
+    padder = padding.PKCS7(128).padder()
     secretmsg = "there is no spoon"
+    padding = padder.update(bytearray(secretmsg)) + padder.finalize()
+
     cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend)
     encryptor = cipher.encryptor()
+
     ciphertext = encryptor.update(bytearray(secretmsg, "utf-8")) + encryptor.finalize()
     connection.send(ciphertext)
 
