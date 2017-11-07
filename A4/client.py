@@ -35,9 +35,10 @@ clientSocket.connect((hostname, port))
 nonce = "".join(random.choice(string.ascii_letters+string.digits) for x in range(16))
 
 # TODO: Make the length parsed from command line
-kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=16, salt=nonce, iterations=100000, backend=default_backend)
-IV = kdf.derive(bytearray(key+nonce+"IV", "UTF-8"))
-SK = kdf.derive(bytearray(key+nonce+"SK", "UTF-8"))
+kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=16, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
+IV = kdf.derive(bytes(key+nonce+"IV", "UTF-8"))
+kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=16, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
+SK = kdf.derive(bytes(key+nonce+"SK", "UTF-8"))
 
 # first message, send only cipher and nonce
 clientSocket.send(bytearray(cipher+";"+nonce, "UTF-8"))
@@ -46,9 +47,6 @@ a = clientSocket.recv(1024)
 # send requests to server
 clientSocket.send(bytearray(command+";"+filename, "UTF-8"))
 
-# respond to challenge
-challenge = clientSocket.recv(1024)
-
 
 cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend())
 decryptor = cipher.decryptor()
@@ -56,14 +54,11 @@ decryptor = cipher.decryptor()
 # respond to challenge
 challenge = clientSocket.recv(1024)
 
-kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=16, salt=nonce, iterations=100000, backend=default_backend)
-IV = kdf.derive(bytearray(key+nonce+"IV", "UTF-8"))
-SK = kdf.derive(bytearray(key+nonce+"SK", "UTF-8"))
+
 
 
 cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend())
 decryptor = cipher.decryptor()
->>>>>>> 05c58d7884d36d863f5543197afb31a094c00295
 answer = decryptor.update(challenge) + decryptor.finalize()
 clientSocket.send(answer)
 

@@ -55,10 +55,12 @@ while True:
     command = requests.split(";", 1)[0]
     filename = requests.split(";", 2)[1]
 
+    salt = bytearray(nonce, "utf-8")
     # TODO: Make the length parsed from command line
-    kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=16, salt=nonce, iterations=100000, backend=default_backend)
-    IV = kdf.derive(bytearray(key+nonce+"IV", "UTF-8"))
-    SK = kdf.derive(bytearray(key+nonce+"SK", "UTF-8"))
+    kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=16, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
+    IV = kdf.derive(bytes(key+nonce+"IV", "UTF-8"))
+    kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=16, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
+    SK = kdf.derive(bytes(key+nonce+"SK", "UTF-8"))
 
     # logging
     print(getTime()+"New connection from "+str(ip)+" cipher="+cipher)
@@ -69,14 +71,17 @@ while True:
 
     #connection.send(bytearray("OK", "UTF-8"))
     # send challenge
-    padder = padding.PKCS7(128).padder()
     secretmsg = "there is no spoon"
-    padding = padder.update(bytearray(secretmsg)) + padder.finalize()
 
-    cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend)
+    # add padding and encryption
+    cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend())
     encryptor = cipher.encryptor()
+    padder = padding.PKCS7(128).padder()
+    padding = padder.update(bytes(secretmsg, "utf-8")) + padder.finalize()
 
-    ciphertext = encryptor.update(bytearray(secretmsg, "utf-8")) + encryptor.finalize()
+    ciphertext = encryptor.update(padding) + encryptor.finalize()
+
+    #ciphertext = encryptor.update(bytearray(secretmsg, "utf-8")) + encryptor.finalize()
     connection.send(ciphertext)
 
     # receive response from client
