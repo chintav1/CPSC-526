@@ -62,7 +62,8 @@ while True:
     salt = os.urandom(16)
     # TODO: Make the length parsed from command line
     kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=16, salt=salt, iterations=100000, backend=backend)
-    SK = kdf.derive(bytearray(key+nonce+"IV", "UTF-8"))
+    IV = kdf.derive(bytearray(key+nonce+"IV", "UTF-8"))
+    SK = kdf.derive(bytearray(key+nonce+"SK", "UTF-8"))
 
     # logging
     print(getTime()+"New connection from "+str(ip)+" cipher="+cipher)
