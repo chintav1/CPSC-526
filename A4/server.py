@@ -77,20 +77,24 @@ while True:
     cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend())
     encryptor = cipher.encryptor()
     padder = padding.PKCS7(128).padder()
-    padding = padder.update(bytes(secretmsg, "utf-8")) + padder.finalize()
+    pad = padder.update(bytes(secretmsg, "utf-8")) + padder.finalize()
 
-    ciphertext = encryptor.update(padding) + encryptor.finalize()
+    ciphertext = encryptor.update(pad) + encryptor.finalize()
 
-    #ciphertext = encryptor.update(bytearray(secretmsg, "utf-8")) + encryptor.finalize()
+    #ciphertext = encryptor.update(bytes(secretmsg, "utf-8")) + encryptor.finalize()
     connection.send(ciphertext)
 
     # receive response from client
     answer = (connection.recv(1024)).decode("utf-8")
+    unpadder = padding.PKCS7(128).unpadder()
+    data = unpadder.update(bytes(answer, "utf-8")) + unpadder.finalize()
+    print(data.decode("utf-8"))
     # check answer
-    if answer == secretmsg:
+    if data.decode("utf-8") == secretmsg:
         print("Key is OK")
         connection.send(bytearray("OK", "utf-8"))
     else:
+
         print("Key is not right, send wrong answer of " + answer)
         connection.send(bytearray("bad key", "utf-8"))
 
