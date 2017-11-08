@@ -31,6 +31,7 @@ if (cipher != "null") and (cipher != "aes128") and (cipher != "aes256"):
 clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 clientSocket.connect((hostname, port))
 
+
 # used this for nonce: https://www.technologycake.com/others/generate-random-string-python/1342/
 nonce = "".join(random.choice(string.ascii_letters+string.digits) for x in range(16))
 
@@ -56,7 +57,6 @@ challenge = clientSocket.recv(1024)
 
 
 
-
 cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend())
 decryptor = cipher.decryptor()
 answer = decryptor.update(challenge) + decryptor.finalize()
@@ -67,8 +67,8 @@ result = (clientSocket.recv(1024)).decode("utf-8")
 if result == "OK":
     print("Yay")
 else:
-    print("No... result is " + result)
-
+    print("Error: Wrong key")
+    os._exit(1)
 
 
 ##         ##

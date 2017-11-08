@@ -9,6 +9,7 @@ from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
+
 def getTime():
     # get time
     dt = time.localtime()
@@ -38,7 +39,6 @@ print("Using secret key:", key)
 
 while True:
     connection, addr = serverSocket.accept()
-
     ip = addr[0]
 
     # first message
@@ -85,23 +85,28 @@ while True:
     connection.send(ciphertext)
 
     # receive response from client
-    answer = (connection.recv(1024)).decode("utf-8")
-    unpadder = padding.PKCS7(128).unpadder()
-    data = unpadder.update(bytes(answer, "utf-8")) + unpadder.finalize()
-    print(data.decode("utf-8"))
-    # check answer
-    if data.decode("utf-8") == secretmsg:
-        print("Key is OK")
-        connection.send(bytearray("OK", "utf-8"))
-    else:
+    try:
+        answer = (connection.recv(1024)).decode("utf-8")
+        unpadder = padding.PKCS7(128).unpadder()
+        data = unpadder.update(bytes(answer, "utf-8")) + unpadder.finalize()
+    
+        # check answer
+        if data.decode("utf-8") == secretmsg:
+            print("Key is OK")
+            connection.send(bytearray("OK", "utf-8"))
+        else:
+            print("Key is not right, send wrong answer of " + answer)
+            connection.send(bytearray("bad key", "utf-8"))
+    except:
+        break
 
-        print("Key is not right, send wrong answer of " + answer)
-        connection.send(bytearray("bad key", "utf-8"))
+
 
 
     ####                          ####
     # client to download from server #
     ####                          ####
+
     if command == "read":
         try:
             with open(filename, "rb") as f:
