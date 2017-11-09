@@ -9,7 +9,6 @@ from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
-<<<<<<< HEAD
 def decrypt(line, SK, IV, cipherLength):
     cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend())
     decryptor = cipher.decryptor()
@@ -31,8 +30,6 @@ def encrypt(line, SK, IV, cipherLength):
 
     return line
 
-=======
->>>>>>> 5f37c6fc6f36ca59fae71685ce056ac270ce8287
 
 def getTime():
     # get time
@@ -102,6 +99,8 @@ while True:
     # send challenge
     secretmsg = "there is no spoon"
 
+
+
     # add padding and encryption
     cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend())
     encryptor = cipher.encryptor()
@@ -143,10 +142,7 @@ while True:
                 connection.recv(1024)
                 line = f.read(1024)
                 while line:
-<<<<<<< HEAD
                     line = encrypt(line, SK, IV, cipherLength)
-=======
->>>>>>> 5f37c6fc6f36ca59fae71685ce056ac270ce8287
                     print(getTime()+"sending:", repr(line))
                     connection.send(line)
                     line = f.read(1024)
@@ -185,18 +181,13 @@ while True:
                         break
                     f.write(data)
                     data = connection.recv(1024)
-                    print(data)
             f.close()
-<<<<<<< HEAD
             connection.send(bytearray("OK", "utf-8"))
             response = (connection.recv(1024)).decode("utf-8")
             if response != "OK":
                 print(getTime()+"status: error - unable to complete uploading")
             else:
                 print(getTime()+"status: success")
-=======
-            print(getTime()+"status: success")
->>>>>>> 5f37c6fc6f36ca59fae71685ce056ac270ce8287
         except FileNotFoundError:
             print(getTime()+"status: error - file not found")
             connection.send(bytearray("error - file not found", "utf-8"))
