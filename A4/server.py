@@ -179,8 +179,8 @@ while True:
                 except:
                     print("starting to receive")
                 while data:
-                    data = decrypt(data, SK, IV)
                     print("receiving ", data)
+                    #data = decrypt(data, SK, IV)
                     f.write(data)
                     data = connection.recv(1024)
             f.close()
