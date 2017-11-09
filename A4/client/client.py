@@ -82,6 +82,7 @@ if command == "write":
         with open(filename, "rb") as f:
             clientSocket.send(bytearray("OK", "utf-8"))
             clientSocket.recv(1024)
+            print("Got the OK from server, time to upload")
             line = sys.stdin.buffer.read(1024)
             while line:
                 clientSocket.send(line)
@@ -122,6 +123,7 @@ elif command == "read":
                 data = clientSocket.recv(1024)
                 print(data)
         f.close()
+        print("finished downloading")
     except FileNotFoundError:
         print("Error, file \"" + filename + "\" not found")
     clientSocket.close()            # close connection
