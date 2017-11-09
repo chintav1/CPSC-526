@@ -6,8 +6,33 @@ import string
 import hashlib
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+
+
+
+def decrypt(line, SK, IV):
+    cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend())
+    decryptor = cipher.decryptor()
+
+    line = decryptor.update(line) + decryptor.finalize()
+    unpadder = padding.PKCS7(128).unpadder()
+    line = unpadder.update(line) + unpadder.finalize()
+
+    return line
+
+def encrypt(line, SK, IV):
+    cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend())
+    encryptor = cipher.encryptor()
+
+    padder = padding.PKCS7(128).padder()
+    pad = padder.update(line) + padder.finalize()
+
+    line = encryptor.update(pad) + encryptor.finalize()
+
+    return line
+
 
 try:
     command = sys.argv[1]
@@ -64,6 +89,7 @@ answer = decryptor.update(challenge) + decryptor.finalize()
 clientSocket.send(answer)
 
 
+
 # get whether key is right or wrong
 result = (clientSocket.recv(1024)).decode("utf-8")
 if result == "OK":
@@ -83,12 +109,15 @@ if command == "write":
             clientSocket.send(bytearray("OK", "utf-8"))
             clientSocket.recv(1024)
             print("Got the OK from server, time to upload")
-            line = sys.stdin.buffer.read(1024)
+            line = f.read(1024)
             while line:
+                line = encrypt(line, SK, IV)
                 clientSocket.send(line)
                 print("Sending", repr(line))
-                line = sys.stdin.buffer.read(1024)
+                line = f.read(1024)
         f.close()
+        print("finished uploading")
+        clientSocket.send(bytearray("OK", "utf-8"))
     except FileNotFoundError:
         clientSocket.send(bytearray("file not found", "utf-8"))
         print("Error, file \"" + filename + "\" not found")
@@ -119,6 +148,7 @@ elif command == "read":
             data = clientSocket.recv(1024)
             while data:
                 print("receiving and downloading data", repr(data))
+                data = decrypt(data, SK, IV)
                 f.write(data)
                 data = clientSocket.recv(1024)
                 print(data)
