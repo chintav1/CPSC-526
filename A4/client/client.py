@@ -57,6 +57,8 @@ clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 clientSocket.connect((hostname, port))
 
 cipherLength = 0
+if cipherType == "null":
+    cipherLength = 0
 if cipherType == "aes128":
     cipherLength = 16
 elif cipherType == "aes256":
@@ -112,19 +114,19 @@ if command == "write":
     try:
         with open(filename, "rb") as f:
             clientSocket.send(bytearray("OK", "utf-8"))
-            response = (clientSocket.recv(1024)).decode("utf-8")
+            response = (clientSocket.recv(128))
             print("Got the OK from server, time to upload, it said: ", response)
-            line = f.read(1024)
+            line = f.read(128)
             while line:
                 line = encrypt(line, SK, IV, cipherLength)
                 clientSocket.send(line)
                 print("sending:", repr(line))
-                line = f.read(1024)
+                line = f.read(128)
         f.close()
         clientSocket.send(encrypt(bytes("NO BYTES -- END OF FILE OK", "utf-8"), SK, IV, cipherLength))
         print("finished uploading")
         response = (clientSocket.recv(1024)).decode("utf-8")
-        if response == "OK":
+        if response == b"OK":
             print("OK GOOD")
         else:
             print("Please respond")
@@ -142,27 +144,29 @@ if command == "write":
 elif command == "read":
     try:
         # check if server allows downloading
-        response = (clientSocket.recv(1024)).decode("utf-8")
-        if "error" in response:
+        response = (clientSocket.recv(128))
+        if b"error" in response:
             print(response)
             clientSocket.close()
             sys.exit()
-        elif response == "OK":
-            print("server said " + response + ". Starting to download")
+        elif response == b"OK":
+            print("server said " + response.decode("utf-8") + ". Starting to download")
             clientSocket.send(bytearray("OK", "utf-8"))
         else:
             print("error")
             clientSocket.close()
             sys.exit()
         with open(filename, "wb") as f:
-            data = clientSocket.recv(1024)
+            data = clientSocket.recv(128)
             while data:
                 print("receiving and downloading data", data)
                 data = decrypt(data, SK, IV, cipherLength)
-                if (data).decode("utf-8") == "NO BYTES -- END OF FILE OK":
+                data = data.decode("utf-8")
+                print(data)
+                if (data == b"NO BYTES -- END OF FILE OK"):
                     break
                 f.write(data)
-                data = clientSocket.recv(1024)
+                data = clientSocket.recv(128)
         f.close()
         print("finished downloading")
         clientSocket.send(bytearray("OK", "utf-8"))

@@ -76,6 +76,8 @@ while True:
     filename = requests.split(";", 2)[1]
 
     cipherLength = 0
+    if cipherType == "null":
+        cipherLength = 0
     if cipherType == "aes128":
         cipherLength = 16
     elif cipherType == "aes256":
@@ -139,17 +141,18 @@ while True:
         try:
             with open(filename, "rb") as f:
                 connection.send(bytearray("OK", "utf-8"))
-                connection.recv(1024)
-                line = f.read(1024)
+                connection.recv(128)
+                line = f.read(128)
+        
                 while line:
                     line = encrypt(line, SK, IV, cipherLength)
-                    print(getTime()+"sending:", repr(line))
+                    print(getTime()+"sending:", line)
                     connection.send(line)
-                    line = f.read(1024)
+                    line = f.read(128)
             f.close()
             connection.send(encrypt(bytes("NO BYTES -- END OF FILE OK", "utf-8"), SK, IV, cipherLength))
-            response = (connection.recv(1024)).decode("utf-8")
-            if response != "OK":
+            response = (connection.recv(128))
+            if response != b"OK":
                 print(getTime()+"status: error - something went wrong")
             else:
                 print(getTime()+"status: success")
@@ -165,26 +168,27 @@ while True:
     elif command == "write":
         try:
             # check if client is able to upload
-            response = (connection.recv(1024)).decode("utf-8")
-            if response != "OK":
+            response = (connection.recv(128))
+            if response != b"OK":
                 print(getTime()+"status: error - "+response)
                 continue
             else:
                 print(getTime()+"status: client said "+response)
                 connection.send(bytearray("OK, please send file", "utf-8"))
             with open(filename, "wb") as f:
-                data = connection.recv(1024)
+                data = connection.recv(128)
                 while data:
-                    print("receiving and downloading data", data)
+                    #print("receiving and downloading data", data.decode("utf-8"))
                     data = decrypt(data, SK, IV, cipherLength)
-                    if (data).decode("utf-8") == "NO BYTES -- END OF FILE OK":
+                    print(data.decode("utf-8"))
+                    if (data == b"NO BYTES -- END OF FILE OK"):
                         break
                     f.write(data)
-                    data = connection.recv(1024)
+                    data = connection.recv(128)
             f.close()
             connection.send(bytearray("OK", "utf-8"))
-            response = (connection.recv(1024)).decode("utf-8")
-            if response != "OK":
+            response = (connection.recv(128))
+            if response != b"OK":
                 print(getTime()+"status: error - unable to complete uploading")
             else:
                 print(getTime()+"status: success")
