@@ -9,7 +9,7 @@ from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
-def decrypt(line, SK, IV):
+def decrypt(line, SK, IV, cipherLength):
     cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend())
     decryptor = cipher.decryptor()
 
@@ -19,7 +19,7 @@ def decrypt(line, SK, IV):
 
     return line
 
-def encrypt(line, SK, IV):
+def encrypt(line, SK, IV, cipherLength):
     cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend())
     encryptor = cipher.encryptor()
 
@@ -64,7 +64,7 @@ while True:
     # first message
     message = connection.recv(1024)
     message = message.decode("utf-8")
-    cipher = message.split(";", 1)[0]
+    cipherType = message.split(";", 1)[0]
     nonce = message.split(";", 2)[1]
     connection.send(bytearray("OK", "UTF-8"))
 
@@ -75,15 +75,21 @@ while True:
     command = requests.split(";", 1)[0]
     filename = requests.split(";", 2)[1]
 
+    cipherLength = 0
+    if cipherType == "aes128":
+        cipherLength = 16
+    elif cipherType == "aes256":
+        cipherLength = 32
+
     salt = bytearray(nonce, "utf-8")
     # TODO: Make the length parsed from command line
     kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=16, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
     IV = kdf.derive(bytes(key+nonce+"IV", "UTF-8"))
-    kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=16, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
+    kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=cipherLength, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
     SK = kdf.derive(bytes(key+nonce+"SK", "UTF-8"))
 
     # logging
-    print(getTime()+"New connection from "+str(ip)+" cipher="+cipher)
+    print(getTime()+"New connection from "+str(ip)+" cipher="+cipherType)
     print(getTime()+"nonce="+str(nonce))
     print(getTime()+"IV="+str(IV))
     print(getTime()+"SK="+str(SK))
@@ -109,11 +115,9 @@ while True:
     # receive response from client
     try:
         answer = (connection.recv(1024)).decode("utf-8")
-        unpadder = padding.PKCS7(128).unpadder()
-        data = unpadder.update(bytes(answer, "utf-8")) + unpadder.finalize()
 
         # check answer
-        if data.decode("utf-8") == secretmsg:                       #right key
+        if answer == secretmsg:                       #right key
             print(getTime() + "Key is OK")
             connection.send(bytearray("OK", "utf-8"))
 
@@ -137,15 +141,13 @@ while True:
                 connection.send(bytearray("OK", "utf-8"))
                 connection.recv(1024)
                 line = f.read(1024)
-                if not line:
-                    f.close()
-                    connection.send(bytearray("NO BYTES", "utf-8"))
                 while line:
-                    line = encrypt(line, SK, IV)
+                    line = encrypt(line, SK, IV, cipherLength)
                     print(getTime()+"sending:", repr(line))
                     connection.send(line)
                     line = f.read(1024)
             f.close()
+            connection.send(encrypt(bytes("NO BYTES -- END OF FILE OK", "utf-8"), SK, IV, cipherLength))
             response = (connection.recv(1024)).decode("utf-8")
             if response != "OK":
                 print(getTime()+"status: error - something went wrong")
@@ -169,21 +171,18 @@ while True:
                 continue
             else:
                 print(getTime()+"status: client said "+response)
-                connection.send(bytearray("OK", "utf-8"))
+                connection.send(bytearray("OK, please send file", "utf-8"))
             with open(filename, "wb") as f:
                 data = connection.recv(1024)
-                try:
-                    if (data).decode("utf-8") == "NO BYTES":
-                        print("NO BYTES")
-                        data = 0
-                except:
-                    print("starting to receive")
                 while data:
-                    data = decrypt(data, SK, IV)
-                    print("receiving ", data)
+                    print("receiving and downloading data", data)
+                    data = decrypt(data, SK, IV, cipherLength)
+                    if (data).decode("utf-8") == "NO BYTES -- END OF FILE OK":
+                        break
                     f.write(data)
                     data = connection.recv(1024)
             f.close()
+            connection.send(bytearray("OK", "utf-8"))
             response = (connection.recv(1024)).decode("utf-8")
             if response != "OK":
                 print(getTime()+"status: error - unable to complete uploading")

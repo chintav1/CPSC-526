@@ -12,7 +12,7 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 
 
-def decrypt(line, SK, IV):
+def decrypt(line, SK, IV, cipherLength):
     cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend())
     decryptor = cipher.decryptor()
 
@@ -22,7 +22,7 @@ def decrypt(line, SK, IV):
 
     return line
 
-def encrypt(line, SK, IV):
+def encrypt(line, SK, IV, cipherLength):
     cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend())
     encryptor = cipher.encryptor()
 
@@ -40,7 +40,7 @@ try:
     hostnamePort = sys.argv[3]
     hostname = hostnamePort.split(":", 1)[0]
     port = int(hostnamePort.split(":", 2)[1])
-    cipher = sys.argv[4]
+    cipherType = sys.argv[4]
     key = sys.argv[5]
 except:
     print("must state command, filename, host:port, cipher, and key")
@@ -48,27 +48,30 @@ except:
     sys.exit()
 
 # make sure correct cipher has been entered
-if (cipher != "null") and (cipher != "aes128") and (cipher != "aes256"):
-    print("bad cipher \"", cipher, "\"")
+if (cipherType != "null") and (cipherType != "aes128") and (cipherType != "aes256"):
+    print("bad cipher \"", cipherType, "\"")
     print("exiting...")
     sys.exit()
 
 clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 clientSocket.connect((hostname, port))
 
-
+cipherLength = 0
+if cipherType == "aes128":
+    cipherLength = 16
+elif cipherType == "aes256":
+    cipherLength = 32
 
 # used this for nonce: https://www.technologycake.com/others/generate-random-string-python/1342/
 nonce = "".join(random.choice(string.ascii_letters+string.digits) for x in range(16))
 
-# TODO: Make the length parsed from command line
 kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=16, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
 IV = kdf.derive(bytes(key+nonce+"IV", "UTF-8"))
-kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=16, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
+kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=cipherLength, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
 SK = kdf.derive(bytes(key+nonce+"SK", "UTF-8"))
 
 # first message, send only cipher and nonce
-clientSocket.send(bytearray(cipher+";"+nonce, "UTF-8"))
+clientSocket.send(bytearray(cipherType+";"+nonce, "UTF-8"))
 a = clientSocket.recv(1024)
 
 # send requests to server
@@ -81,11 +84,13 @@ decryptor = cipher.decryptor()
 # respond to challenge
 challenge = clientSocket.recv(1024)
 
-
-
 cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend())
 decryptor = cipher.decryptor()
 answer = decryptor.update(challenge) + decryptor.finalize()
+
+unpadder = padding.PKCS7(128).unpadder()
+answer = unpadder.update(answer) + unpadder.finalize()
+
 clientSocket.send(answer)
 
 
@@ -107,19 +112,22 @@ if command == "write":
     try:
         with open(filename, "rb") as f:
             clientSocket.send(bytearray("OK", "utf-8"))
-            clientSocket.recv(1024)
-            print("Got the OK from server, time to upload")
+            response = (clientSocket.recv(1024)).decode("utf-8")
+            print("Got the OK from server, time to upload, it said: ", response)
             line = f.read(1024)
-            if not line:
-                clientSocket.send(bytearray("NO BYTES", "utf-8"))
-                f.close()
             while line:
-                line = encrypt(line, SK, IV)
+                line = encrypt(line, SK, IV, cipherLength)
                 clientSocket.send(line)
-                print("Sending", repr(line))
+                print("sending:", repr(line))
                 line = f.read(1024)
         f.close()
+        clientSocket.send(encrypt(bytes("NO BYTES -- END OF FILE OK", "utf-8"), SK, IV, cipherLength))
         print("finished uploading")
+        response = (clientSocket.recv(1024)).decode("utf-8")
+        if response == "OK":
+            print("OK GOOD")
+        else:
+            print("Please respond")
         clientSocket.send(bytearray("OK", "utf-8"))
     except FileNotFoundError:
         clientSocket.send(bytearray("file not found", "utf-8"))
@@ -148,14 +156,13 @@ elif command == "read":
             sys.exit()
         with open(filename, "wb") as f:
             data = clientSocket.recv(1024)
-            if (data).decode("utf-8") == "NO BYTES":
-                data = 0
             while data:
-                print("receiving and downloading data", repr(data))
-                data = decrypt(data, SK, IV)
+                print("receiving and downloading data", data)
+                data = decrypt(data, SK, IV, cipherLength)
+                if (data).decode("utf-8") == "NO BYTES -- END OF FILE OK":
+                    break
                 f.write(data)
                 data = clientSocket.recv(1024)
-                print(data)
         f.close()
         print("finished downloading")
         clientSocket.send(bytearray("OK", "utf-8"))
