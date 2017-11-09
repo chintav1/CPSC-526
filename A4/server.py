@@ -9,27 +9,6 @@ from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
-def decrypt(line, SK, IV):
-    cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend())
-    decryptor = cipher.decryptor()
-
-    line = decryptor.update(line) + decryptor.finalize()
-    unpadder = padding.PKCS7(128).unpadder()
-    line = unpadder.update(line) + unpadder.finalize()
-
-    return line
-
-def encrypt(line, SK, IV):
-    cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend())
-    encryptor = cipher.encryptor()
-
-    padder = padding.PKCS7(128).padder()
-    pad = padder.update(line) + padder.finalize()
-
-    line = encryptor.update(pad) + encryptor.finalize()
-
-    return line
-
 
 def getTime():
     # get time
@@ -93,8 +72,6 @@ while True:
     # send challenge
     secretmsg = "there is no spoon"
 
-
-
     # add padding and encryption
     cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend())
     encryptor = cipher.encryptor()
@@ -138,7 +115,6 @@ while True:
                 connection.recv(1024)
                 line = f.read(1024)
                 while line:
-                    line = encrypt(line, SK, IV)
                     print(getTime()+"sending:", repr(line))
                     connection.send(line)
                     line = f.read(1024)
@@ -169,12 +145,9 @@ while True:
                     data = decrypt(data, SK, IV)
                     f.write(data)
                     data = connection.recv(1024)
+                    print(data)
             f.close()
-            response = (connection.recv(1024)).decode("utf-8")
-            if response != "OK":
-                print(getTime()+"status: error - unable to complete uploading")
-            else:
-                print(getTime()+"status: success")
+            print(getTime()+"status: success")
         except FileNotFoundError:
             print(getTime()+"status: error - file not found")
             connection.send(bytearray("error - file not found", "utf-8"))
