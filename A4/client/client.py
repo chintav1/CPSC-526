@@ -114,7 +114,7 @@ if command == "write":
                 clientSocket.send(bytearray("NO BYTES", "utf-8"))
                 f.close()
             while line:
-                #line = encrypt(line, SK, IV)
+                line = encrypt(line, SK, IV)
                 clientSocket.send(line)
                 print("Sending", repr(line))
                 line = f.read(1024)
@@ -148,11 +148,8 @@ elif command == "read":
             sys.exit()
         with open(filename, "wb") as f:
             data = clientSocket.recv(1024)
-            try:
-                if (data).decode("utf-8") == "NO BYTES":
-                    data = 0
-            except:
-                print("starting to receive")
+            if (data).decode("utf-8") == "NO BYTES":
+                data = 0
             while data:
                 print("receiving and downloading data", repr(data))
                 data = decrypt(data, SK, IV)
