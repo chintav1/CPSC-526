@@ -35,8 +35,6 @@ serverSocket.listen(0)
 print("Listening on port", port)
 print("Using secret key:", key)
 
-
-
 while True:
     connection, addr = serverSocket.accept()
     ip = addr[0]
@@ -91,14 +89,17 @@ while True:
         data = unpadder.update(bytes(answer, "utf-8")) + unpadder.finalize()
     
         # check answer
-        if data.decode("utf-8") == secretmsg:
-            print("Key is OK")
+        if data.decode("utf-8") == secretmsg:                       #right key
+            print(getTime() + "Key is OK")
             connection.send(bytearray("OK", "utf-8"))
-        else:
-            print("Key is not right, send wrong answer of " + answer)
-            connection.send(bytearray("bad key", "utf-8"))
+    
     except:
-        break
+        print(getTime() + "Client used the wrong key")              #wrong key
+        connection.send(bytearray("Wrong secret", "utf-8"))
+        continue                    
+        
+
+
 
 
 

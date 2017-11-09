@@ -32,6 +32,7 @@ clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 clientSocket.connect((hostname, port))
 
 
+
 # used this for nonce: https://www.technologycake.com/others/generate-random-string-python/1342/
 nonce = "".join(random.choice(string.ascii_letters+string.digits) for x in range(16))
 
@@ -62,10 +63,11 @@ decryptor = cipher.decryptor()
 answer = decryptor.update(challenge) + decryptor.finalize()
 clientSocket.send(answer)
 
+
 # get whether key is right or wrong
 result = (clientSocket.recv(1024)).decode("utf-8")
 if result == "OK":
-    print("Yay")
+    print("Key is OK")
 else:
     print("Error: Wrong key")
     os._exit(1)
