@@ -6,10 +6,10 @@ import string
 import hashlib
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
+<<<<<<< HEAD
 
 
 def decrypt(line, SK, IV, cipherLength):
@@ -34,6 +34,8 @@ def encrypt(line, SK, IV, cipherLength):
     return line
 
 
+=======
+>>>>>>> 5f37c6fc6f36ca59fae71685ce056ac270ce8287
 try:
     command = sys.argv[1]
     filename = sys.argv[2]
@@ -94,7 +96,6 @@ answer = unpadder.update(answer) + unpadder.finalize()
 clientSocket.send(answer)
 
 
-
 # get whether key is right or wrong
 result = (clientSocket.recv(1024)).decode("utf-8")
 if result == "OK":
@@ -112,6 +113,7 @@ if command == "write":
     try:
         with open(filename, "rb") as f:
             clientSocket.send(bytearray("OK", "utf-8"))
+<<<<<<< HEAD
             response = (clientSocket.recv(1024)).decode("utf-8")
             print("Got the OK from server, time to upload, it said: ", response)
             line = f.read(1024)
@@ -129,6 +131,16 @@ if command == "write":
         else:
             print("Please respond")
         clientSocket.send(bytearray("OK", "utf-8"))
+=======
+            clientSocket.recv(1024)
+            print("Got the OK from server, time to upload")
+            line = sys.stdin.buffer.read(1024)
+            while line:
+                clientSocket.send(line)
+                print("Sending", repr(line))
+                line = sys.stdin.buffer.read(1024)
+        f.close()
+>>>>>>> 5f37c6fc6f36ca59fae71685ce056ac270ce8287
     except FileNotFoundError:
         clientSocket.send(bytearray("file not found", "utf-8"))
         print("Error, file \"" + filename + "\" not found")
@@ -157,10 +169,14 @@ elif command == "read":
         with open(filename, "wb") as f:
             data = clientSocket.recv(1024)
             while data:
+<<<<<<< HEAD
                 print("receiving and downloading data", data)
                 data = decrypt(data, SK, IV, cipherLength)
                 if (data).decode("utf-8") == "NO BYTES -- END OF FILE OK":
                     break
+=======
+                print("receiving and downloading data", repr(data))
+>>>>>>> 5f37c6fc6f36ca59fae71685ce056ac270ce8287
                 f.write(data)
                 data = clientSocket.recv(1024)
         f.close()
