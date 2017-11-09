@@ -159,10 +159,9 @@ elif command == "read":
         with open(filename, "wb") as f:
             data = clientSocket.recv(128)
             while data:
-                print("receiving and downloading data", data)
+                #print("receiving and downloading data", data)
                 data = decrypt(data, SK, IV, cipherLength)
-                data = data.decode("utf-8")
-                print(data)
+                print(data.decode("utf-8"))
                 if (data == b"NO BYTES -- END OF FILE OK"):
                     break
                 f.write(data)

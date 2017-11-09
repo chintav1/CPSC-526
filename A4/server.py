@@ -142,8 +142,8 @@ while True:
             with open(filename, "rb") as f:
                 connection.send(bytearray("OK", "utf-8"))
                 connection.recv(128)
+                # start to send file
                 line = f.read(128)
-        
                 while line:
                     line = encrypt(line, SK, IV, cipherLength)
                     print(getTime()+"sending:", line)
