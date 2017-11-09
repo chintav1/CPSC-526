@@ -31,6 +31,7 @@ except:
 serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 serverSocket.bind(("localhost", port))
 
+
 serverSocket.listen(0)
 print("Listening on port", port)
 print("Using secret key:", key)
@@ -108,21 +109,26 @@ while True:
     # client to download from server #
     ####                          ####
 
+
+
     if command == "read":
         try:
-            with open(filename, "rb") as f:
+            with open("copy_file", "rb") as f:
                 connection.send(bytearray("OK", "utf-8"))
                 connection.recv(1024)
                 line = sys.stdin.buffer.read(1024)
+                print(line)
                 while line:
-                    print(getTime()+"sending:", repr(line))
+                    print(getTime()+"sending:" + repr(line))
                     connection.send(line)
                     line = sys.stdin.buffer.read(1024)
                 print(getTime()+"status: success")
             f.close()
+            continue
         except FileNotFoundError:
             connection.send(bytearray("error - file not found", "utf-8"))
             print(getTime()+"status: error - file not found")
+            continue
 
 
     ####                      ####
@@ -138,16 +144,18 @@ while True:
             else:
                 print(getTime()+"status: client said "+response)
                 connection.send(bytearray("OK", "utf-8"))
-            with open(filename, "wb") as f:
+            with open(filename, "rb") as f:
                 data = connection.recv(1024)
                 while data:
                     f.write(data)
                     data = connection.recv(1024)
             f.close()
             print(getTime()+"status: success")
+            continue
         except FileNotFoundError:
             print(getTime()+"status: error - file not found")
             connection.send(bytearray("error - file not found", "utf-8"))
+            continue
 
     # not correct command (this should never be reached, actually)
     else:
