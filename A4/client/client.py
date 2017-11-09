@@ -110,6 +110,9 @@ if command == "write":
             clientSocket.recv(1024)
             print("Got the OK from server, time to upload")
             line = f.read(1024)
+            if not line:
+                clientSocket.send(bytearray("NO BYTES", "utf-8"))
+                f.close()
             while line:
                 line = encrypt(line, SK, IV)
                 clientSocket.send(line)
@@ -128,7 +131,6 @@ if command == "write":
 ##           ##
 # ask server to send contents of a file called filename
 # write results to standard output
-# may have to use two recv loops, one to determine size...
 elif command == "read":
     try:
         # check if server allows downloading
@@ -146,6 +148,8 @@ elif command == "read":
             sys.exit()
         with open(filename, "wb") as f:
             data = clientSocket.recv(1024)
+            if (data).decode("utf-8") == "NO BYTES":
+                data = 0
             while data:
                 print("receiving and downloading data", repr(data))
                 data = decrypt(data, SK, IV)
@@ -154,6 +158,7 @@ elif command == "read":
                 print(data)
         f.close()
         print("finished downloading")
+        clientSocket.send(bytearray("OK", "utf-8"))
     except FileNotFoundError:
         print("Error, file \"" + filename + "\" not found")
     clientSocket.close()            # close connection

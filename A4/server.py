@@ -137,13 +137,20 @@ while True:
                 connection.send(bytearray("OK", "utf-8"))
                 connection.recv(1024)
                 line = f.read(1024)
+                if not line:
+                    f.close()
+                    connection.send(bytearray("NO BYTES", "utf-8"))
                 while line:
                     line = encrypt(line, SK, IV)
                     print(getTime()+"sending:", repr(line))
                     connection.send(line)
                     line = f.read(1024)
-                print(getTime()+"status: success")
             f.close()
+            response = (connection.recv(1024)).decode("utf-8")
+            if response != "OK":
+                print(getTime()+"status: error - something went wrong")
+            else:
+                print(getTime()+"status: success")
         except FileNotFoundError:
             connection.send(bytearray("error - file not found", "utf-8"))
             print(getTime()+"status: error - file not found")
@@ -165,8 +172,15 @@ while True:
                 connection.send(bytearray("OK", "utf-8"))
             with open(filename, "wb") as f:
                 data = connection.recv(1024)
+                try:
+                    if (data).decode("utf-8") == "NO BYTES":
+                        print("NO BYTES")
+                        data = 0
+                except:
+                    print("starting to receive")
                 while data:
                     data = decrypt(data, SK, IV)
+                    print("receiving ", data)
                     f.write(data)
                     data = connection.recv(1024)
             f.close()
