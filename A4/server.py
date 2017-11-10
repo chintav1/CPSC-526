@@ -84,8 +84,7 @@ while True:
         cipherLength = 32
 
     salt = bytearray(nonce, "utf-8")
-    # TODO: Make the length parsed from command line
-    kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=16, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
+    kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=cipherLength, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
     IV = kdf.derive(bytes(key+nonce+"IV", "UTF-8"))
     kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=cipherLength, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
     SK = kdf.derive(bytes(key+nonce+"SK", "UTF-8"))
@@ -116,7 +115,7 @@ while True:
 
     # receive response from client
     try:
-        answer = (connection.recv(1024)).decode("utf-8")
+        answer = (connection.recv(128)).decode("utf-8")
 
         # check answer
         if answer == secretmsg:                       #right key
@@ -173,14 +172,14 @@ while True:
                 print(getTime()+"status: error - "+response)
                 continue
             else:
-                print(getTime()+"status: client said "+response)
+                print(getTime()+"status: client said "+response.decode("utf-8"))
                 connection.send(bytearray("OK, please send file", "utf-8"))
             with open(filename, "wb") as f:
                 data = connection.recv(128)
                 while data:
                     #print("receiving and downloading data", data.decode("utf-8"))
                     data = decrypt(data, SK, IV, cipherLength)
-                    print(data.decode("utf-8"))
+                    #print(data.decode("utf-8"))
                     if (data == b"NO BYTES -- END OF FILE OK"):
                         break
                     f.write(data)
