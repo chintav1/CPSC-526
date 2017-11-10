@@ -67,7 +67,7 @@ elif cipherType == "aes256":
 # used this for nonce: https://www.technologycake.com/others/generate-random-string-python/1342/
 nonce = "".join(random.choice(string.ascii_letters+string.digits) for x in range(16))
 
-kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=cipherLength, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
+kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=16, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
 IV = kdf.derive(bytes(key+nonce+"IV", "UTF-8"))
 kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=cipherLength, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
 SK = kdf.derive(bytes(key+nonce+"SK", "UTF-8"))

@@ -84,7 +84,7 @@ while True:
         cipherLength = 32
 
     salt = bytearray(nonce, "utf-8")
-    kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=cipherLength, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
+    kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=16, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
     IV = kdf.derive(bytes(key+nonce+"IV", "UTF-8"))
     kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=cipherLength, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
     SK = kdf.derive(bytes(key+nonce+"SK", "UTF-8"))
@@ -169,7 +169,7 @@ while True:
             # check if client is able to upload
             response = (connection.recv(128))
             if response != b"OK":
-                print(getTime()+"status: error - "+response)
+                print(getTime()+"status: error - "+response.decode("utf-8"))
                 continue
             else:
                 print(getTime()+"status: client said "+response.decode("utf-8"))
