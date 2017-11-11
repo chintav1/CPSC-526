@@ -114,14 +114,14 @@ if command == "read":
     try:
         # check if server allows downloading
         response = decrypt(clientSocket.recv(BLOCK_SIZE), SK, IV, cipherType)
-        if b"error" in response:
+        if b"error - file not found" in response:
             print("Server said", response)
             clientSocket.close()
             sys.exit()
-        elif response == b"OK":
+        elif response == b"OK TO READ":
             print("server said " + response.decode("utf-8") + ". Starting to download")
             # tell server it is ready to receive
-            clientSocket.send(encrypt(bytes("OK", "utf-8"), SK, IV, cipherType))
+            clientSocket.send(encrypt(bytes("OK READY TO READ", "utf-8"), SK, IV, cipherType))
         else:
             # shouldn't ever reach this
             print("error")
@@ -133,10 +133,23 @@ if command == "read":
             print("starting to receive")
             data = decrypt(clientSocket.recv(BLOCK_SIZE), SK, IV, cipherType)
             while data:
-                print("receiving and downloading data", data)
+                #print("receiving and downloading data", data)
                 f.write(data)
+                if len(data) < BLOCK_SIZE:
+                    break
                 data = decrypt(clientSocket.recv(BLOCK_SIZE), SK, IV, cipherType)
         f.close()
+        print("done")
+        # get message asking to confirm if got it all successfully
+        #response = decrypt(clientSocket.recv(BLOCK_SIZE), SK, IV, cipherType)
+        # send to server finished downloading successfully
+        #if response == bytes(str(len(filename))+" OK", "utf-8"):
+            #print("Finished successfully")
+        #else:
+            #print("RESPONSE WAS", response.decode("utf-8"))
+        clientSocket.send(encrypt(bytes(str(len(filename))+" OK", "utf-8"), SK, IV, cipherType))
+        print(len(filename))
+
 
     except FileNotFoundError:
         print("Error, file \"" + filename + "\" not found")
@@ -163,6 +176,7 @@ elif command == "write":
                 print("sending:", repr(line))
                 line = f.read(BLOCK_SIZE)
         f.close()
+
 
     except FileNotFoundError:
         clientSocket.send(encrypt(bytes("file not found", "utf-8"), SK, IV, cipherType))

@@ -121,9 +121,9 @@ while True:
     response = connection.recv(BLOCK_SIZE)
 
     if response == bytes(secretmsg, "utf-8"):
-        print(getTime()+": Key OK")
+        print(getTime()+"Key OK")
     else:
-        print(getTime()+": Incorrrect key")
+        print(getTime()+"Incorrrect key")
         continue
 
     # send response that key is good
@@ -154,17 +154,27 @@ while True:
         try:
             with open(filename, "rb") as f:
                 # tell client if file exists
-                connection.send(encrypt(bytes("OK", "utf-8"), SK, IV, cipherType))
+                connection.send(encrypt(bytes("OK TO READ", "utf-8"), SK, IV, cipherType))
                 # get message from client if it is ready to receive
                 response = decrypt(connection.recv(BLOCK_SIZE), SK, IV, cipherType)
+                print("client said:", response.decode("utf-8"))
 
                 # start to send file
                 line = f.read(BLOCK_SIZE)
                 while line:
-                    print(getTime()+"sending:", line.decode("utf-8"))
+                    #print(getTime()+"sending:", line.decode("utf-8"))
                     connection.send(encrypt(line, SK, IV, cipherType))
                     line = f.read(BLOCK_SIZE)
             f.close()
+            print("dondone")
+
+            # tell client sending is over
+            #connection.send(encrypt(bytes(str(len(filename))+" OK", "utf-8"), SK, IV, cipherType))
+            # if client says ok, success
+            response = decrypt(connection.recv(BLOCK_SIZE), SK, IV, cipherType)
+            #if response == bytes(str(len(filename))+" OK", "utf-8"):
+                #print(getTime()+"status: success")
+            print("Finished, but client said:",response.decode("utf-8"))
 
         except FileNotFoundError:
             connection.send(encrypt(bytes("error - file not found", "utf-8"), SK, IV, cipherType))
