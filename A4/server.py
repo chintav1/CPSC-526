@@ -83,12 +83,18 @@ while True:
     elif cipherType == "aes256":
         cipherLength = 32
 
-    salt = bytearray(nonce, "utf-8")
-    kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=16, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
-    IV = kdf.derive(bytes(key+nonce+"IV", "UTF-8"))
-    kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=cipherLength, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
-    SK = kdf.derive(bytes(key+nonce+"SK", "UTF-8"))
-
+    if cipherType != "null":  
+        kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=16, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
+        IV = kdf.derive(bytes(key+nonce+"IV", "UTF-8"))
+        kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=cipherLength, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
+        SK = kdf.derive(bytes(key+nonce+"SK", "UTF-8"))
+    
+    else:
+        kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=0, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
+        IV = kdf.derive(bytes(key+nonce+"IV", "UTF-8"))
+        kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=0, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
+        SK = kdf.derive(bytes(key+nonce+"SK", "UTF-8"))
+    
     # logging
     print(getTime()+"New connection from "+str(ip)+" cipher="+cipherType)
     print(getTime()+"nonce="+str(nonce))
@@ -100,31 +106,30 @@ while True:
     # send challenge
     secretmsg = "there is no spoon"
 
-
-
     # add padding and encryption
-    cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend())
-    encryptor = cipher.encryptor()
-    padder = padding.PKCS7(128).padder()
-    pad = padder.update(bytes(secretmsg, "utf-8")) + padder.finalize()
+    if(cipherType != "null"):
+        ciphertext = encrypt(bytes(secretmsg, "utf-8"), SK, IV, cipherLength)
+        connection.send(ciphertext)
 
-    ciphertext = encryptor.update(pad) + encryptor.finalize()
-
-    #ciphertext = encryptor.update(bytes(secretmsg, "utf-8")) + encryptor.finalize()
-    connection.send(ciphertext)
+    else:
+        connection.send(bytes(secretmsg, "utf-8"))
 
     # receive response from client
     try:
-        answer = (connection.recv(128)).decode("utf-8")
+        answer = (connection.recv(128))
+        print(answer.decode("utf-8"))
 
         # check answer
-        if answer == secretmsg:                       #right key
+        if ((cipherType != "null") and (answer.decode("utf-8") == secretmsg)):                       #right key
             print(getTime() + "Key is OK")
+            connection.send(bytearray("OK", "utf-8"))
+        else:
+            print(getTime() + "null cipher is used")
             connection.send(bytearray("OK", "utf-8"))
 
     except:
         print(getTime() + "Client used the wrong key")              #wrong key
-        connection.send(bytearray("Wrong secret", "utf-8"))
+        #connection.send(bytearray("Wrong secret", "utf-8"))
         continue
 
 
@@ -144,7 +149,8 @@ while True:
                 # start to send file
                 line = f.read(128)
                 while line:
-                    line = encrypt(line, SK, IV, cipherLength)
+                    if cipherType != "null":
+                        line = encrypt(line, SK, IV, cipherLength)
                     print(getTime()+"sending:", line)
                     connection.send(line)
                     line = f.read(128)
@@ -178,8 +184,11 @@ while True:
                 data = connection.recv(128)
                 while data:
                     #print("receiving and downloading data", data.decode("utf-8"))
-                    data = decrypt(data, SK, IV, cipherLength)
-                    #print(data.decode("utf-8"))
+                    if cipherType != "null":
+                        data = decrypt(data, SK, IV, cipherLength)
+                    
+                    print(data)
+                    
                     if (data == b"NO BYTES -- END OF FILE OK"):
                         break
                     f.write(data)

@@ -64,13 +64,18 @@ if cipherType == "aes128":
 elif cipherType == "aes256":
     cipherLength = 32
 
+
+
 # used this for nonce: https://www.technologycake.com/others/generate-random-string-python/1342/
 nonce = "".join(random.choice(string.ascii_letters+string.digits) for x in range(16))
 
-kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=16, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
-IV = kdf.derive(bytes(key+nonce+"IV", "UTF-8"))
-kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=cipherLength, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
-SK = kdf.derive(bytes(key+nonce+"SK", "UTF-8"))
+if cipherType != "null":
+    kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=16, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
+    IV = kdf.derive(bytes(key+nonce+"IV", "UTF-8"))
+    kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=cipherLength, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
+    SK = kdf.derive(bytes(key+nonce+"SK", "UTF-8"))
+    cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend())
+    decryptor = cipher.decryptor()
 
 # first message, send only cipher and nonce
 clientSocket.send(bytearray(cipherType+";"+nonce, "UTF-8"))
@@ -80,26 +85,27 @@ a = clientSocket.recv(1024)
 clientSocket.send(bytearray(command+";"+filename, "UTF-8"))
 
 
-cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend())
-decryptor = cipher.decryptor()
+
 
 # respond to challenge
 challenge = clientSocket.recv(1024)
+print("challenge")
+print(challenge)
 
-cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend())
-decryptor = cipher.decryptor()
-answer = decryptor.update(challenge) + decryptor.finalize()
 
-unpadder = padding.PKCS7(128).unpadder()
-answer = unpadder.update(answer) + unpadder.finalize()
+if cipherType != "null":
+    answer = decrypt(challenge, SK, IV, cipherLength)
+    print(answer.decode("utf-8"))
+    clientSocket.send(answer)
 
-clientSocket.send(answer)
+else:
+    clientSocket.send(challenge)
 
 
 
 # get whether key is right or wrong
-result = (clientSocket.recv(1024)).decode("utf-8")
-if result == "OK":
+result = (clientSocket.recv(1024))
+if result == b"OK":
     print("Key is OK")
 else:
     print("Error: Wrong key")
@@ -118,12 +124,17 @@ if command == "write":
             print("Got the OK from server, time to upload, it said: ", response)
             line = f.read(128)
             while line:
-                line = encrypt(line, SK, IV, cipherLength)
+                if cipherType != "null":
+                    line = encrypt(line, SK, IV, cipherLength)
+
                 clientSocket.send(line)
                 print("sending:", repr(line))
                 line = f.read(128)
         f.close()
-        clientSocket.send(encrypt(bytes("NO BYTES -- END OF FILE OK", "utf-8"), SK, IV, cipherLength))
+        if cipherType != "null":
+            clientSocket.send(encrypt(bytes("NO BYTES -- END OF FILE OK", "utf-8"), SK, IV, cipherLength))
+        else:
+            clientSocket.send(bytearray("NO BYTES -- END OF FILE OK", "utf-8"))
         print("finished uploading")
         response = (clientSocket.recv(128))
         print(response.decode("utf-8"))
@@ -161,8 +172,9 @@ elif command == "read":
             data = clientSocket.recv(128)
             while data:
                 #print("receiving and downloading data", data)
-                data = decrypt(data, SK, IV, cipherLength)
-                print(data.decode("utf-8"))
+                if cipherType != "null":
+                    data = decrypt(data, SK, IV, cipherLength)
+                print(data)
                 if (data == b"NO BYTES -- END OF FILE OK"):
                     break
                 f.write(data)
