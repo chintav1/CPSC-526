@@ -9,7 +9,30 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+import struct
 
+# credit to: http://stupidpythonideas.blogspot.ca/2013/05/sockets-are-byte-streams-not-message.html
+# for methods send_msg, recvall, and recv_msg
+# and realising that padding error was due to sending files and not the actual encryption
+
+def send_msg(s, data):
+    length = len(data)
+    s.send(struct.pack('!I', length))
+    s.send(data)
+
+def recvall(s, count):
+    buf = b''
+    while count:
+        newbuf = s.recv(count)
+        if not newbuf: return None
+        buf = buf + newbuf
+        count = count - len(newbuf)
+    return buf
+
+def recv_msg(s):
+    lengthbuf = recvall(s, 4)
+    length, = struct.unpack('!I', lengthbuf)
+    return recvall(s, length)
 
 
 def decrypt(line, SK, IV, cipherType):
@@ -20,10 +43,9 @@ def decrypt(line, SK, IV, cipherType):
     decryptor = cipher.decryptor()
 
     line = decryptor.update(line) + decryptor.finalize()
-    print(line)
     unpadder = padding.PKCS7(128).unpadder()
-    line = unpadder.update(line) + unpadder.finalize()
 
+    line = unpadder.update(line) + unpadder.finalize()
 
     return line
 
@@ -133,28 +155,16 @@ if command == "read":
         # begin downloading
         with open(filename, "wb") as f:
             print("starting to receive")
-            size = 0
-            data = decrypt(clientSocket.recv(32), SK, IV, cipherType)
-            while data != b'GET OUT':
-                #print("receiving and downloading data", data)
-                print(len(data))
-                print(data)
-                size = size + len(data)
+            data = recv_msg(clientSocket)
+            data = decrypt(data, SK, IV, cipherType)
+            while data != b'':
+                print("receiving", data)
                 f.write(data)
-                data = decrypt(clientSocket.recv(32), SK, IV, cipherType)
+                data = recv_msg(clientSocket)
+                data = decrypt(data, SK, IV, cipherType)
         f.close()
-        print(data)
-        print("done")
-        # get message asking to confirm if got it all successfully
-        #response = decrypt(clientSocket.recv(BLOCK_SIZE), SK, IV, cipherType)
-        # send to server finished downloading successfully
-        #if response == bytes(str(len(filename))+" OK", "utf-8"):
-            #print("Finished successfully")
-        #else:
-            #print("RESPONSE WAS", response.decode("utf-8"))
-        clientSocket.send(encrypt(bytes(str(size)+" OK", "utf-8"), SK, IV, cipherType))
-        print(size)
-
+        print("Successfully received file")
+        clientSocket.send(encrypt(bytes("OK", "utf-8"), SK, IV, cipherType))
 
     except FileNotFoundError:
         print("Error, file \"" + filename + "\" not found")
@@ -176,12 +186,14 @@ elif command == "write":
 
             # begin uploading
             line = f.read(BLOCK_SIZE)
+            send_msg(clientSocket, encrypt(line, SK, IV, cipherType))
             while line:
-                clientSocket.send(encrypt(line, SK, IV, cipherType))
-                print("sending:", repr(line))
+                print("sending", line)
                 line = f.read(BLOCK_SIZE)
+                send_msg(clientSocket, encrypt(line, SK, IV, cipherType))
         f.close()
-
+        print("Successfully sent file")
+        clientSocket.send(encrypt(bytes("OK", "utf-8"), SK, IV, cipherType))
 
     except FileNotFoundError:
         clientSocket.send(encrypt(bytes("file not found", "utf-8"), SK, IV, cipherType))
