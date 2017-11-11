@@ -9,6 +9,8 @@ from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
+
+
 def decrypt(line, SK, IV, cipherType):
     if cipherType == "null":
         return line
@@ -17,8 +19,14 @@ def decrypt(line, SK, IV, cipherType):
     decryptor = cipher.decryptor()
 
     line = decryptor.update(line) + decryptor.finalize()
-    unpadder = padding.PKCS7(128).unpadder()
-    line = unpadder.update(line) + unpadder.finalize()
+
+    if len(line) == 0:
+        return line
+    try:
+        unpadder = padding.PKCS7(128).unpadder()
+        line = unpadder.update(line) + unpadder.finalize()
+    except:
+        return line
 
     return line
 
@@ -30,9 +38,9 @@ def encrypt(line, SK, IV, cipherType):
     encryptor = cipher.encryptor()
 
     padder = padding.PKCS7(128).padder()
-    pad = padder.update(line) + padder.finalize()
+    line = padder.update(line) + padder.finalize()
 
-    line = encryptor.update(pad) + encryptor.finalize()
+    line = encryptor.update(line) + encryptor.finalize()
 
     return line
 
@@ -158,22 +166,35 @@ while True:
                 # get message from client if it is ready to receive
                 response = decrypt(connection.recv(BLOCK_SIZE), SK, IV, cipherType)
                 print("client said:", response.decode("utf-8"))
-
+                if response != b"OK READY TO READ":
+                    print("something went wrong")
+                    continue
                 # start to send file
-                line = f.read(BLOCK_SIZE)
+                line = f.read(32)
+                size = len(line)
                 while line:
+                    print(len(line))
+                    print(line)
+                    size = size + len(line)
                     #print(getTime()+"sending:", line.decode("utf-8"))
                     connection.send(encrypt(line, SK, IV, cipherType))
-                    line = f.read(BLOCK_SIZE)
+                    line = f.read(32)
+
+
             f.close()
-            print("dondone")
+            connection.send(encrypt(b'', SK, IV, cipherType))
+            connection.send(encrypt(b'GET OUT', SK, IV, cipherType))
+
+
+            #print("dondone", len(filename))
 
             # tell client sending is over
             #connection.send(encrypt(bytes(str(len(filename))+" OK", "utf-8"), SK, IV, cipherType))
             # if client says ok, success
             response = decrypt(connection.recv(BLOCK_SIZE), SK, IV, cipherType)
-            #if response == bytes(str(len(filename))+" OK", "utf-8"):
-                #print(getTime()+"status: success")
+            print(size)
+            if response == bytes(str(size)+" OK", "utf-8"):
+                print(getTime()+"status: success")
             print("Finished, but client said:",response.decode("utf-8"))
 
         except FileNotFoundError:

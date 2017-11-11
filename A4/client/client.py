@@ -20,8 +20,10 @@ def decrypt(line, SK, IV, cipherType):
     decryptor = cipher.decryptor()
 
     line = decryptor.update(line) + decryptor.finalize()
+    print(line)
     unpadder = padding.PKCS7(128).unpadder()
     line = unpadder.update(line) + unpadder.finalize()
+
 
     return line
 
@@ -131,14 +133,17 @@ if command == "read":
         # begin downloading
         with open(filename, "wb") as f:
             print("starting to receive")
-            data = decrypt(clientSocket.recv(BLOCK_SIZE), SK, IV, cipherType)
-            while data:
+            size = 0
+            data = decrypt(clientSocket.recv(32), SK, IV, cipherType)
+            while data != b'GET OUT':
                 #print("receiving and downloading data", data)
+                print(len(data))
+                print(data)
+                size = size + len(data)
                 f.write(data)
-                if len(data) < BLOCK_SIZE:
-                    break
-                data = decrypt(clientSocket.recv(BLOCK_SIZE), SK, IV, cipherType)
+                data = decrypt(clientSocket.recv(32), SK, IV, cipherType)
         f.close()
+        print(data)
         print("done")
         # get message asking to confirm if got it all successfully
         #response = decrypt(clientSocket.recv(BLOCK_SIZE), SK, IV, cipherType)
@@ -147,8 +152,8 @@ if command == "read":
             #print("Finished successfully")
         #else:
             #print("RESPONSE WAS", response.decode("utf-8"))
-        clientSocket.send(encrypt(bytes(str(len(filename))+" OK", "utf-8"), SK, IV, cipherType))
-        print(len(filename))
+        clientSocket.send(encrypt(bytes(str(size)+" OK", "utf-8"), SK, IV, cipherType))
+        print(size)
 
 
     except FileNotFoundError:
