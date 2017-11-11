@@ -9,22 +9,21 @@ from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
-def decrypt(line, SK, IV):
+def decrypt(line, SK, IV, cipherLength):
     cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend())
     decryptor = cipher.decryptor()
 
     line = decryptor.update(line) + decryptor.finalize()
-
     unpadder = padding.PKCS7(128).unpadder()
     line = unpadder.update(line) + unpadder.finalize()
 
     return line
 
-def encrypt(line, SK, IV):
+def encrypt(line, SK, IV, cipherLength):
     cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend())
     encryptor = cipher.encryptor()
-    padder = padding.PKCS7(128).padder()
 
+    padder = padding.PKCS7(128).padder()
     pad = padder.update(line) + padder.finalize()
 
     line = encryptor.update(pad) + encryptor.finalize()
@@ -53,12 +52,11 @@ except:
 serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 serverSocket.bind(("localhost", port))
 
+BLOCK_SIZE = 128
 
 serverSocket.listen(0)
 print("Listening on port", port)
 print("Using secret key:", key)
-
-BLOCK_SIZE = 128
 
 while True:
     connection, addr = serverSocket.accept()
@@ -86,12 +84,15 @@ while True:
     elif cipherType == "aes256":
         cipherLength = 32
 
-    salt = bytearray(nonce, "utf-8")
-    # TODO: Make the length parsed from command line
-    kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=16, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
-    IV = kdf.derive(bytes(key+nonce+"IV", "UTF-8"))
-    kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=cipherLength, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
-    SK = kdf.derive(bytes(key+nonce+"SK", "UTF-8"))
+    IV = 0
+    SK = 0
+
+    if cipherType != "null":
+        kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=16, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
+        IV = kdf.derive(bytes(key+nonce+"IV", "UTF-8"))
+        kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=cipherLength, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
+        SK = kdf.derive(bytes(key+nonce+"SK", "UTF-8"))
+
 
     # logging
     print(getTime()+"New connection from "+str(ip)+" cipher="+cipherType)
@@ -104,31 +105,30 @@ while True:
     # send challenge
     secretmsg = "there is no spoon"
 
-
-
     # add padding and encryption
-    cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend())
-    encryptor = cipher.encryptor()
-    padder = padding.PKCS7(BLOCK_SIZE).padder()
-    pad = padder.update(bytes(secretmsg, "utf-8")) + padder.finalize()
+    if(cipherType != "null"):
+        ciphertext = encrypt(bytes(secretmsg, "utf-8"), SK, IV, cipherLength)
+        connection.send(ciphertext)
 
-    ciphertext = encryptor.update(pad) + encryptor.finalize()
-
-    #ciphertext = encryptor.update(bytes(secretmsg, "utf-8")) + encryptor.finalize()
-    connection.send(ciphertext)
+    else:
+        connection.send(bytes(secretmsg, "utf-8"))
 
     # receive response from client
     try:
-        answer = connection.recv(BLOCK_SIZE)
+        answer = (connection.recv(BLOCK_SIZE))
+        print(answer.decode("utf-8"))
 
         # check answer
-        if answer == bytes(secretmsg, "utf-8"):                       #right key
+        if ((cipherType != "null") and (answer.decode("utf-8") == secretmsg)):                       #right key
             print(getTime() + "Key is OK")
+            connection.send(bytearray("OK", "utf-8"))
+        else:
+            print(getTime() + "null cipher is used")
             connection.send(bytearray("OK", "utf-8"))
 
     except:
         print(getTime() + "Client used the wrong key")              #wrong key
-        connection.send(bytearray("Wrong secret", "utf-8"))
+        #connection.send(bytearray("Wrong secret", "utf-8"))
         continue
 
 
@@ -143,19 +143,19 @@ while True:
     if command == "read":
         try:
             with open(filename, "rb") as f:
-                connection.send(encrypt(bytes("OK", "utf-8"), SK, IV))
-                response = decrypt(connection.recv(BLOCK_SIZE), SK, IV)
-                print("Client says: ", response.decode("utf-8"), ", going to send files")
+                connection.send(bytearray("OK", "utf-8"))
+                connection.recv(BLOCK_SIZE)
                 # start to send file
                 line = f.read(BLOCK_SIZE)
                 while line:
-                    #print(getTime()+"sending:", line.decode("utf-8"))
-                    line = encrypt(line, SK, IV)
+                    if cipherType != "null":
+                        line = encrypt(line, SK, IV, cipherLength)
                     print(getTime()+"sending:", line)
                     connection.send(line)
                     line = f.read(BLOCK_SIZE)
             f.close()
-            connection.send(encrypt(bytes("EOF", "utf-8"), SK, IV))
+            if cipherType != "null":
+                connection.send(encrypt(bytes("NO BYTES -- END OF FILE OK", "utf-8"), SK, IV, cipherLength))
             response = (connection.recv(BLOCK_SIZE))
             if response != b"OK":
                 print(getTime()+"status: error - something went wrong")
@@ -175,17 +175,20 @@ while True:
             # check if client is able to upload
             response = (connection.recv(BLOCK_SIZE))
             if response != b"OK":
-                print(getTime()+"status: error -", response)
+                print(getTime()+"status: error - "+response.decode("utf-8"))
                 continue
             else:
-                print(getTime()+"status: client said", response)
+                print(getTime()+"status: client said "+response.decode("utf-8"))
                 connection.send(bytearray("OK, please send file", "utf-8"))
             with open(filename, "wb") as f:
                 data = connection.recv(BLOCK_SIZE)
                 while data:
                     #print("receiving and downloading data", data.decode("utf-8"))
-                    data = decrypt(data, SK, IV)
-                    print(data.decode("utf-8"))
+                    if cipherType != "null":
+                        data = decrypt(data, SK, IV, cipherLength)
+
+                    print(data)
+
                     if (data == b"NO BYTES -- END OF FILE OK"):
                         break
                     f.write(data)
