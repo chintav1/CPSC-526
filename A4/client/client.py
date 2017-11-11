@@ -12,17 +12,19 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 
 
-def decrypt(line, SK, IV, cipherLength):
+def decrypt(line, SK, IV):
     cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend())
     decryptor = cipher.decryptor()
 
     line = decryptor.update(line) + decryptor.finalize()
+
     unpadder = padding.PKCS7(128).unpadder()
     line = unpadder.update(line) + unpadder.finalize()
 
+
     return line
 
-def encrypt(line, SK, IV, cipherLength):
+def encrypt(line, SK, IV):
     cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend())
     encryptor = cipher.encryptor()
 
@@ -64,6 +66,8 @@ if cipherType == "aes128":
 elif cipherType == "aes256":
     cipherLength = 32
 
+BLOCK_SIZE = 128
+
 # used this for nonce: https://www.technologycake.com/others/generate-random-string-python/1342/
 nonce = "".join(random.choice(string.ascii_letters+string.digits) for x in range(16))
 
@@ -74,7 +78,7 @@ SK = kdf.derive(bytes(key+nonce+"SK", "UTF-8"))
 
 # first message, send only cipher and nonce
 clientSocket.send(bytearray(cipherType+";"+nonce, "UTF-8"))
-a = clientSocket.recv(1024)
+a = clientSocket.recv(BLOCK_SIZE)
 
 # send requests to server
 clientSocket.send(bytearray(command+";"+filename, "UTF-8"))
@@ -84,13 +88,13 @@ cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend())
 decryptor = cipher.decryptor()
 
 # respond to challenge
-challenge = clientSocket.recv(1024)
+challenge = clientSocket.recv(BLOCK_SIZE)
 
 cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend())
 decryptor = cipher.decryptor()
 answer = decryptor.update(challenge) + decryptor.finalize()
 
-unpadder = padding.PKCS7(128).unpadder()
+unpadder = padding.PKCS7(BLOCK_SIZE).unpadder()
 answer = unpadder.update(answer) + unpadder.finalize()
 
 clientSocket.send(answer)
@@ -98,7 +102,7 @@ clientSocket.send(answer)
 
 
 # get whether key is right or wrong
-result = (clientSocket.recv(1024)).decode("utf-8")
+result = (clientSocket.recv(BLOCK_SIZE)).decode("utf-8")
 if result == "OK":
     print("Key is OK")
 else:
@@ -114,18 +118,18 @@ if command == "write":
     try:
         with open(filename, "rb") as f:
             clientSocket.send(bytearray("OK", "utf-8"))
-            response = (clientSocket.recv(128))
+            response = (clientSocket.recv(BLOCK_SIZE))
             print("Got the OK from server, time to upload, it said: ", response)
-            line = f.read(128)
+            line = f.read(BLOCK_SIZE)
             while line:
-                line = encrypt(line, SK, IV, cipherLength)
+                line = encrypt(line, SK, IV)
                 clientSocket.send(line)
                 print("sending:", repr(line))
-                line = f.read(128)
+                line = f.read(BLOCK_SIZE)
         f.close()
-        clientSocket.send(encrypt(bytes("NO BYTES -- END OF FILE OK", "utf-8"), SK, IV, cipherLength))
+        clientSocket.send(encrypt(bytes("NO BYTES -- END OF FILE OK", "utf-8"), SK, IV))
         print("finished uploading")
-        response = (clientSocket.recv(1024)).decode("utf-8")
+        response = (clientSocket.recv(BLOCK_SIZE)).decode("utf-8")
         if response == b"OK":
             print("OK GOOD")
         else:
@@ -144,28 +148,30 @@ if command == "write":
 elif command == "read":
     try:
         # check if server allows downloading
-        response = (clientSocket.recv(128))
+        response = decrypt((clientSocket.recv(BLOCK_SIZE), SK, IV))
         if b"error" in response:
             print(response)
             clientSocket.close()
             sys.exit()
         elif response == b"OK":
             print("server said " + response.decode("utf-8") + ". Starting to download")
-            clientSocket.send(bytearray("OK", "utf-8"))
+            clientSocket.send(encrypt(bytes("OK", "utf-8"), SK, IV))
         else:
             print("error")
             clientSocket.close()
             sys.exit()
         with open(filename, "wb") as f:
-            data = clientSocket.recv(128)
+            data = clientSocket.recv(BLOCK_SIZE)
             while data:
-                #print("receiving and downloading data", data)
-                data = decrypt(data, SK, IV, cipherLength)
-                print(data.decode("utf-8"))
-                if (data == b"NO BYTES -- END OF FILE OK"):
-                    break
+                data = decrypt(data, SK, IV)
+                print("receiving and downloading data", data)
+                print("LENGTH = ", len(data))
+
                 f.write(data)
-                data = clientSocket.recv(128)
+                if (data == b"EOF") or len(data) == 0:
+                    print("Finished?")
+                    break
+                data = clientSocket.recv(BLOCK_SIZE)
         f.close()
         print("finished downloading")
         clientSocket.send(bytearray("OK", "utf-8"))

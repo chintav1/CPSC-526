@@ -9,21 +9,22 @@ from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
-def decrypt(line, SK, IV, cipherLength):
+def decrypt(line, SK, IV):
     cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend())
     decryptor = cipher.decryptor()
 
     line = decryptor.update(line) + decryptor.finalize()
+
     unpadder = padding.PKCS7(128).unpadder()
     line = unpadder.update(line) + unpadder.finalize()
 
     return line
 
-def encrypt(line, SK, IV, cipherLength):
+def encrypt(line, SK, IV):
     cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend())
     encryptor = cipher.encryptor()
-
     padder = padding.PKCS7(128).padder()
+
     pad = padder.update(line) + padder.finalize()
 
     line = encryptor.update(pad) + encryptor.finalize()
@@ -57,12 +58,14 @@ serverSocket.listen(0)
 print("Listening on port", port)
 print("Using secret key:", key)
 
+BLOCK_SIZE = 128
+
 while True:
     connection, addr = serverSocket.accept()
     ip = addr[0]
 
     # first message
-    message = connection.recv(1024)
+    message = connection.recv(BLOCK_SIZE)
     message = message.decode("utf-8")
     cipherType = message.split(";", 1)[0]
     nonce = message.split(";", 2)[1]
@@ -70,7 +73,7 @@ while True:
 
 
     # get requests
-    requests = connection.recv(1024)
+    requests = connection.recv(BLOCK_SIZE)
     requests = requests.decode("utf-8")
     command = requests.split(";", 1)[0]
     filename = requests.split(";", 2)[1]
@@ -106,7 +109,7 @@ while True:
     # add padding and encryption
     cipher = Cipher(algorithms.AES(SK), modes.CBC(IV), backend=default_backend())
     encryptor = cipher.encryptor()
-    padder = padding.PKCS7(128).padder()
+    padder = padding.PKCS7(BLOCK_SIZE).padder()
     pad = padder.update(bytes(secretmsg, "utf-8")) + padder.finalize()
 
     ciphertext = encryptor.update(pad) + encryptor.finalize()
@@ -116,10 +119,10 @@ while True:
 
     # receive response from client
     try:
-        answer = (connection.recv(1024)).decode("utf-8")
+        answer = connection.recv(BLOCK_SIZE)
 
         # check answer
-        if answer == secretmsg:                       #right key
+        if answer == bytes(secretmsg, "utf-8"):                       #right key
             print(getTime() + "Key is OK")
             connection.send(bytearray("OK", "utf-8"))
 
@@ -140,18 +143,20 @@ while True:
     if command == "read":
         try:
             with open(filename, "rb") as f:
-                connection.send(bytearray("OK", "utf-8"))
-                connection.recv(128)
+                connection.send(encrypt(bytes("OK", "utf-8"), SK, IV))
+                response = decrypt(connection.recv(BLOCK_SIZE), SK, IV)
+                print("Client says: ", response.decode("utf-8"), ", going to send files")
                 # start to send file
-                line = f.read(128)
+                line = f.read(BLOCK_SIZE)
                 while line:
-                    line = encrypt(line, SK, IV, cipherLength)
+                    #print(getTime()+"sending:", line.decode("utf-8"))
+                    line = encrypt(line, SK, IV)
                     print(getTime()+"sending:", line)
                     connection.send(line)
-                    line = f.read(128)
+                    line = f.read(BLOCK_SIZE)
             f.close()
-            connection.send(encrypt(bytes("NO BYTES -- END OF FILE OK", "utf-8"), SK, IV, cipherLength))
-            response = (connection.recv(128))
+            connection.send(encrypt(bytes("EOF", "utf-8"), SK, IV))
+            response = (connection.recv(BLOCK_SIZE))
             if response != b"OK":
                 print(getTime()+"status: error - something went wrong")
             else:
@@ -168,26 +173,26 @@ while True:
     elif command == "write":
         try:
             # check if client is able to upload
-            response = (connection.recv(128))
+            response = (connection.recv(BLOCK_SIZE))
             if response != b"OK":
-                print(getTime()+"status: error - "+response)
+                print(getTime()+"status: error -", response)
                 continue
             else:
-                print(getTime()+"status: client said "+response)
+                print(getTime()+"status: client said", response)
                 connection.send(bytearray("OK, please send file", "utf-8"))
             with open(filename, "wb") as f:
-                data = connection.recv(128)
+                data = connection.recv(BLOCK_SIZE)
                 while data:
                     #print("receiving and downloading data", data.decode("utf-8"))
-                    data = decrypt(data, SK, IV, cipherLength)
+                    data = decrypt(data, SK, IV)
                     print(data.decode("utf-8"))
                     if (data == b"NO BYTES -- END OF FILE OK"):
                         break
                     f.write(data)
-                    data = connection.recv(128)
+                    data = connection.recv(BLOCK_SIZE)
             f.close()
             connection.send(bytearray("OK", "utf-8"))
-            response = (connection.recv(128))
+            response = (connection.recv(BLOCK_SIZE))
             if response != b"OK":
                 print(getTime()+"status: error - unable to complete uploading")
             else:
