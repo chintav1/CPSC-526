@@ -9,6 +9,7 @@ from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import struct
+import binascii
 
 # credit to: http://stupidpythonideas.blogspot.ca/2013/05/sockets-are-byte-streams-not-message.html
 # for methods send_msg, recvall, and recv_msg
@@ -151,6 +152,7 @@ while True:
         print(getTime()+"Key OK")
     else:
         print(getTime()+"Incorrrect key")
+        connection.close()
         continue
 
     # send response that key is good
@@ -158,9 +160,9 @@ while True:
 
     # logging
     print(getTime()+"New connection from "+str(ip)+" cipher="+cipherType)
-    print(getTime()+"nonce="+str(nonce))
-    print(getTime()+"IV="+str(IV))
-    print(getTime()+"SK="+str(SK))
+    print(getTime()+"nonce="+str(nonce).upper())
+    print(getTime()+"IV="+(binascii.hexlify(IV)).decode('ascii'))
+    print(getTime()+"SK="+(binascii.hexlify(SK)).decode('ascii'))
 
 
     # get requests from client
@@ -193,7 +195,7 @@ while True:
                 line = f.read(BLOCK_SIZE)
                 send_msg(connection, encrypt(line, SK, IV, cipherType))
                 while line:
-                    print("sending", line)
+                    #print("sending", line)
                     line = f.read(BLOCK_SIZE)
                     send_msg(connection, encrypt(line, SK, IV, cipherType))
             f.close()
@@ -222,7 +224,7 @@ while True:
                 continue
             else:
                 print(getTime()+"status: client said "+response.decode("utf-8"))
-                connection.send(encrypt(bytes("OK, please send file", "utf-8"), SK, IV, cipherType))
+                connection.send(encrypt(bytes("OK", "utf-8"), SK, IV, cipherType))
 
             # start to receive file
             with open(filename, "wb") as f:
@@ -230,7 +232,7 @@ while True:
                 data = recv_msg(connection)
                 data = decrypt(data, SK, IV, cipherType)
                 while data:
-                    print("receiving", data)
+                    #print("receiving", data)
                     f.write(data)
                     data = recv_msg(connection)
                     data = decrypt(data, SK, IV, cipherType)

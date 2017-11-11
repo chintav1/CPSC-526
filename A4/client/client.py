@@ -112,8 +112,9 @@ clientSocket.send(bytearray(cipherType+";"+nonce, "UTF-8"))
 challenge = clientSocket.recv(BLOCK_SIZE)
 
 # create and send answer
+
 answer = decrypt(challenge, SK, IV, cipherType)
-print("Answer = ", answer.decode("utf-8"))
+#print("Answer = ", answer.decode("utf-8"))
 clientSocket.send(answer)
 
 
@@ -121,8 +122,9 @@ clientSocket.send(answer)
 result = decrypt(clientSocket.recv(BLOCK_SIZE), SK, IV, cipherType)
 
 if result == b"KEY OK":
-    print("Yay, time to send server what I want to do")
-
+    print("OK", file=sys.stderr)
+else:
+    print("Error: wrong key", file=sys.stderr)
 
 # send requests to server
 clientSocket.send(encrypt(bytes(command+";"+filename, "UTF-8"), SK, IV, cipherType))
@@ -139,35 +141,34 @@ if command == "read":
         # check if server allows downloading
         response = decrypt(clientSocket.recv(BLOCK_SIZE), SK, IV, cipherType)
         if b"error - file not found" in response:
-            print("Server said", response)
+            print("Error: file could not be read by server", file=sys.stderr)
             clientSocket.close()
             sys.exit()
         elif response == b"OK TO READ":
-            print("server said " + response.decode("utf-8") + ". Starting to download")
             # tell server it is ready to receive
             clientSocket.send(encrypt(bytes("OK READY TO READ", "utf-8"), SK, IV, cipherType))
         else:
             # shouldn't ever reach this
-            print("error")
+            print("error", file=sys.stderr)
             clientSocket.close()
             sys.exit()
 
         # begin downloading
-        with open(filename, "wb") as f:
-            print("starting to receive")
+        #with open(filename, "wb") as f:
+            #print("starting to receive")
+        data = recv_msg(clientSocket)
+        data = decrypt(data, SK, IV, cipherType)
+        while data != b'':
+            #print("receiving", data)
+            sys.stdout.write(data.decode("utf-8"))
             data = recv_msg(clientSocket)
             data = decrypt(data, SK, IV, cipherType)
-            while data != b'':
-                print("receiving", data)
-                f.write(data)
-                data = recv_msg(clientSocket)
-                data = decrypt(data, SK, IV, cipherType)
-        f.close()
-        print("Successfully received file")
+        #f.close()
+        print("OK", file=sys.stderr)
         clientSocket.send(encrypt(bytes("OK", "utf-8"), SK, IV, cipherType))
 
     except FileNotFoundError:
-        print("Error, file \"" + filename + "\" not found")
+        print("Error: file \"" + filename + "\" not found", file=sys.stderr)
     clientSocket.close()            # close connection
 
 
@@ -182,24 +183,27 @@ elif command == "write":
             clientSocket.send(encrypt(bytes("OK", "utf-8"), SK, IV, cipherType))
             # get response that server is ready to receive
             response = decrypt(clientSocket.recv(BLOCK_SIZE), SK, IV, cipherType)
-            print("Server said", response.decode("utf-8"), "time to send")
+            if response != b'OK':
+                print("Error: file could not be written by server", file=sys.stderr)
+                clientSocket.close()
+                sys.exit()
 
             # begin uploading
-            line = f.read(BLOCK_SIZE)
+            line = sys.std.read(BLOCK_SIZE)
             send_msg(clientSocket, encrypt(line, SK, IV, cipherType))
             while line:
-                print("sending", line)
-                line = f.read(BLOCK_SIZE)
+                #print("sending", line)
+                line = sys.stdin.buffer.read(BLOCK_SIZE)
                 send_msg(clientSocket, encrypt(line, SK, IV, cipherType))
         f.close()
-        print("Successfully sent file")
+        print("OK", file=sys.stderr)
         clientSocket.send(encrypt(bytes("OK", "utf-8"), SK, IV, cipherType))
 
     except FileNotFoundError:
         clientSocket.send(encrypt(bytes("file not found", "utf-8"), SK, IV, cipherType))
-        print("Error, file \"" + filename + "\" not found")
+        print("Error: file \"" + filename + "\" not found", file=sys.stderr)
     clientSocket.close()
 
 else:
-    print("bad command \"", command, "\"")
+    print("Error: bad command \"", command, "\"", file=sys.stderr)
     clientSocket.close()
