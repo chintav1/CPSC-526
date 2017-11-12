@@ -13,7 +13,7 @@ import binascii
 
 # credit to: http://stupidpythonideas.blogspot.ca/2013/05/sockets-are-byte-streams-not-message.html
 # for methods send_msg, recvall, and recv_msg
-# and realising that padding error was due to sending files and not the actual encryption
+# and realising that padding error was due to files received not at the expected length and not the actual encryption
 
 def send_msg(s, data):
     length = len(data)
@@ -106,28 +106,8 @@ while True:
 
 
 
-    '''
-    try:
-        answer = (connection.recv(BLOCK_SIZE))
-        print("Answer = ", answer.decode("utf-8"))
-
-        # check answer
-        if ((cipherType != "null") and (answer.decode("utf-8") == secretmsg)):                       #right key
-            print(getTime() + "Key is OK")
-            connection.send(bytearray("OK", "utf-8"))
-        else:
-            print(getTime() + "null cipher is used")
-            connection.send(bytearray("OK", "utf-8"))
-
-    except:
-        print(getTime() + "Client used the wrong key")              #wrong key
-        #connection.send(bytearray("Wrong secret", "utf-8"))
-        continue
-    '''
-
-
     keyLength = 16
-    if keyLength == "aes256":
+    if cipherType == "aes256":
         keyLength = 32
 
     kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=16, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
@@ -144,16 +124,19 @@ while True:
     ciphertext = encrypt(bytes(secretmsg, "utf-8"), SK, IV, cipherType)
     connection.send(ciphertext)
 
+
     # receive response from client
-    # TODO: Fix this
     response = connection.recv(BLOCK_SIZE)
 
-    if response == bytes(secretmsg, "utf-8"):
+    answer = hashlib.sha256(ciphertext+bytes(key,"utf-8")).digest()
+
+    if response == answer:
         print(getTime()+"Key OK")
     else:
-        print(getTime()+"Incorrrect key")
+        print(getTime()+"Incorrect key")
         connection.close()
         continue
+
 
     # send response that key is good
     connection.send(encrypt(bytes("KEY OK", "utf-8"), SK, IV, cipherType))

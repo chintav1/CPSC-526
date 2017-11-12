@@ -11,9 +11,11 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import struct
 
+# credit to: https://www.technologycake.com/others/generate-random-string-python/1342/ for creating nonce, on line 95
+
 # credit to: http://stupidpythonideas.blogspot.ca/2013/05/sockets-are-byte-streams-not-message.html
 # for methods send_msg, recvall, and recv_msg
-# and realising that padding error was due to sending files and not the actual encryption
+# and realising that padding error was due to files received not at the expected length and not the actual encryption
 
 def send_msg(s, data):
     length = len(data)
@@ -93,7 +95,7 @@ BLOCK_SIZE = 128
 nonce = "".join(random.choice(string.ascii_letters+string.digits) for x in range(16))
 
 keyLength = 16
-if keyLength == "aes256":
+if cipherType == "aes256":
     keyLength = 32
 
 kdf = PBKDF2HMAC (algorithm=hashes.SHA256(), length=16, salt=(bytes(nonce, "utf-8")), iterations=100000, backend=default_backend())
@@ -111,26 +113,23 @@ clientSocket.send(bytearray(cipherType+";"+nonce, "UTF-8"))
 # receive challenge
 challenge = clientSocket.recv(BLOCK_SIZE)
 
+
 # create and send answer
+answer = hashlib.sha256(challenge+bytes(key, "utf-8")).digest()
+clientSocket.send(answer)
+
 try:
-    answer = decrypt(challenge, SK, IV, cipherType)
-    #print("Answer = ", answer.decode("utf-8"))
-    clientSocket.send(answer)
-
-
-# get response if key is right
-
     result = decrypt(clientSocket.recv(BLOCK_SIZE), SK, IV, cipherType)
-
-
-    if result == b"KEY OK":
-        print("", end="", file=sys.stderr)
-    else:
-        print("Error: wrong key", file=sys.stderr)
-        sys.exit()
 except:
-    print("Error: wrong key", file=sys.stderr)
-    sys.exit()
+    result = clientSocket.recv(BLOCK_SIZE)
+
+if result == b'KEY OK':
+    print("",end="",file=sys.stderr)
+else:
+    print("error: wrong key", file=sys.stderr)
+
+
+
 
 # send requests to server
 clientSocket.send(encrypt(bytes(command+";"+filename, "UTF-8"), SK, IV, cipherType))
