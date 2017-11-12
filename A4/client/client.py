@@ -122,7 +122,7 @@ clientSocket.send(answer)
 result = decrypt(clientSocket.recv(BLOCK_SIZE), SK, IV, cipherType)
 
 if result == b"KEY OK":
-    print("OK", file=sys.stderr)
+    print("", end="", file=sys.stderr)
 else:
     print("Error: wrong key", file=sys.stderr)
 
@@ -154,16 +154,16 @@ if command == "read":
             sys.exit()
 
         # begin downloading
-        #with open(filename, "wb") as f:
+        with open(filename, "wb") as f:
             #print("starting to receive")
-        data = recv_msg(clientSocket)
-        data = decrypt(data, SK, IV, cipherType)
-        while data != b'':
-            #print("receiving", data)
-            sys.stdout.write(data.decode("utf-8"))
             data = recv_msg(clientSocket)
             data = decrypt(data, SK, IV, cipherType)
-        #f.close()
+            while data != b'':
+                #print("receiving", data)
+                sys.stdout.buffer.write(data)
+                data = recv_msg(clientSocket)
+                data = decrypt(data, SK, IV, cipherType)
+        f.close()
         print("OK", file=sys.stderr)
         clientSocket.send(encrypt(bytes("OK", "utf-8"), SK, IV, cipherType))
 
@@ -189,7 +189,7 @@ elif command == "write":
                 sys.exit()
 
             # begin uploading
-            line = sys.std.read(BLOCK_SIZE)
+            line = sys.stdin.buffer.read(BLOCK_SIZE)
             send_msg(clientSocket, encrypt(line, SK, IV, cipherType))
             while line:
                 #print("sending", line)
