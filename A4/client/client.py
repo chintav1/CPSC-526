@@ -112,19 +112,25 @@ clientSocket.send(bytearray(cipherType+";"+nonce, "UTF-8"))
 challenge = clientSocket.recv(BLOCK_SIZE)
 
 # create and send answer
-
-answer = decrypt(challenge, SK, IV, cipherType)
-#print("Answer = ", answer.decode("utf-8"))
-clientSocket.send(answer)
+try:
+    answer = decrypt(challenge, SK, IV, cipherType)
+    #print("Answer = ", answer.decode("utf-8"))
+    clientSocket.send(answer)
 
 
 # get response if key is right
-result = decrypt(clientSocket.recv(BLOCK_SIZE), SK, IV, cipherType)
 
-if result == b"KEY OK":
-    print("", end="", file=sys.stderr)
-else:
+    result = decrypt(clientSocket.recv(BLOCK_SIZE), SK, IV, cipherType)
+
+
+    if result == b"KEY OK":
+        print("", end="", file=sys.stderr)
+    else:
+        print("Error: wrong key", file=sys.stderr)
+        sys.exit()
+except:
     print("Error: wrong key", file=sys.stderr)
+    sys.exit()
 
 # send requests to server
 clientSocket.send(encrypt(bytes(command+";"+filename, "UTF-8"), SK, IV, cipherType))

@@ -84,7 +84,7 @@ except:
     sys.exit()
 
 serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-serverSocket.bind(("localhost", port))
+serverSocket.bind(("", port))
 
 BLOCK_SIZE = 128
 
