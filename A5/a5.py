@@ -26,11 +26,9 @@ def firewall(rules, direction, ip, port, flag):
 
         # figure out what to do with packet
         # if all match, do exactly as rule says
-        if d_match == 1 and ip_match == 1 and port_match == 1:
-            if est_only and flag == 0:
-                reject
-            else:
-                return i
+        # return which rule number to follow
+        if d_match == 1 and ip_match == 1 and port_match == 1 and (not est_only or (est_only and flag == 1)):
+            return i
 
     # if reaches here, then no rules for this packet, so reject
     return "drop"
