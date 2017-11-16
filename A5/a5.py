@@ -28,7 +28,7 @@ def firewall(rules, direction, ip, port, flag):
         # if all match, do exactly as rule says
         # return which rule number to follow
         if d_match == 1 and ip_match == 1 and port_match == 1 and (not est_only or (est_only and flag == 1)):
-            return i
+            return str(i+1) + " " + rules[i][2]
 
     # if reaches here, then no rules for this packet, so reject
     return "drop"
@@ -76,6 +76,7 @@ f.close()
 # direction, ip, port, flag
 packet = ["", "", "", ""]
 with open(packet_file, "r") as f:
+    line = sys.stdin.buffer.readline()
     for line in f:
         direction = line.split(" ", 0)[1]
         ip = line.split(" ", 1)[2]
@@ -86,9 +87,12 @@ with open(packet_file, "r") as f:
         decision = firewall(rules, direction, ip, port, flag)
         if decision == "drop":
             # do the drop output
+            print("drop() "+direction+" "+ip+" "+port+" "+flag, file=stdout)
         else:
-            # if decision is a number, then it's action from line
-
+            # if doesn't say drop, then do action
+            linenum = decision.split(" ", 0)[1]
+            action = decision.split(" ", 1)[2]
+            print(action+"("+linenum+") "+direction+" "+ip+" "+port+" "+flag, file=stdout)
 f.close()
 
 
