@@ -1,4 +1,5 @@
 import sys, os
+import re
 
 # need to filter both incoming and outgoing packets
 
@@ -47,10 +48,11 @@ def firewall(rules, direction, ip, port, flag):
 # line number for rule, direction, action, ip, port, flag
 
 
-rules = [][0, "", "", "", "", ""]
+rules = [[0, "", "", "", "", ""]]
 
 linenum = 0
 flag = ""
+config_file = sys.argv[1]
 with open(config_file, "r") as f:
     line = sys.stdin.buffer.readline()
     for line in f:
@@ -67,6 +69,7 @@ with open(config_file, "r") as f:
         else:
             flag = ""
         rules[linenum-1] = [linenum, direction, action, str(ip), str(port), flag]
+        print(rules[linenum-1])
 f.close()
 
 

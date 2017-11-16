@@ -183,7 +183,7 @@ if command == "read":
 # read from standard input and send to the server
 elif command == "write":
     try:
-        with open(filename, "rb") as f:
+        with open(filename, "wb") as f:
             # tell server is is able to send
             clientSocket.send(encrypt(bytes("OK", "utf-8"), SK, IV, cipherType))
             # get response that server is ready to receive
