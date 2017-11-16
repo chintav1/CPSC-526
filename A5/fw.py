@@ -2,6 +2,17 @@ import sys, os
 
 # need to filter both incoming and outgoing packets
 
+def bitmask(ip):
+    ip = ip.split("/", 1)[0]
+    bits = int(ip.split("/", 2)[1])
+
+    ip1 = int(ip.split(".", 1)[0])
+    ip2 = int(ip.split(".", 2)[1])
+    ip3 = int(ip.split(".", 3)[2])
+    ip4 = int(ip.split(".", 4)[3])
+
+    return
+
 def firewall(rules, direction, ip, port, flag):
     # go through all rules and see if it matches the other four things
     # if it does, do what the rules says
@@ -15,7 +26,6 @@ def firewall(rules, direction, ip, port, flag):
     for i in range(0, len(rules)):
         #print("i",i+1)
         #print("rules:", rules[i][2])
-
         if DEBUG: print("direction:",rules[i][1], direction)
         if rules[i][1] == direction:
             d_match = 1
@@ -31,7 +41,7 @@ def firewall(rules, direction, ip, port, flag):
             port_match = 1
         else: port_match = 0
 
-        #print("establish:", rules[i][5])
+        # turn the flag into an int and check
         f = int(flag)
         if rules[i][5] == "":
             establish = 1
@@ -107,7 +117,7 @@ f.close()
 # direction, ip, port, flag
 packet = ["", "", "", ""]
 for line in sys.stdin:
-    #print("packet:",line, end="", file=sys.stdout)
+    print("packet:",line, end="", file=sys.stdout)
     line = line.replace("\n", "")
     line.strip("\t")
 
