@@ -1,6 +1,7 @@
 import sys, os
+import select
 
-# need to filter both incoming and outgoing packets
+
 
 def bitmask(r_ip, p_ip):
 
@@ -9,8 +10,13 @@ def bitmask(r_ip, p_ip):
         return True
 
     # get and separate ip from rule
+    # check for bad ip
     ip = r_ip.split("/", 1)[0]
-    r_bits = int(r_ip.split("/", 2)[1])
+    try:
+        r_bits = int(r_ip.split("/", 2)[1])
+    except:
+        print("Error: bad rule IP input. Continuing...", file=sys.stderr)
+        return False
 
     r_ip1 = int(ip.split(".", 1)[0])
     r_ip2 = int(ip.split(".", 2)[1])
@@ -26,7 +32,7 @@ def bitmask(r_ip, p_ip):
     p_ip4 = int(ip.split(".", 4)[3])
 
     # create the netmask
-    mask = 0b00000000
+    mask = 0b0
     mask1 = 0
     mask2 = 0
     mask3 = 0
@@ -36,7 +42,7 @@ def bitmask(r_ip, p_ip):
     for i in range(1,r_bits+1):
         # restart ever 8 bits
         if (i == 9 or i == 17  or i == 25):
-            mask = 0b00000000
+            mask = 0b0
         mask = mask >> 1
         mask = mask | 0b10000000
         # separate to four bytes
@@ -48,37 +54,38 @@ def bitmask(r_ip, p_ip):
             mask3 = mask
         else:
             mask4 = mask
-    #print(bin(mask1),".",bin(mask2),".",bin(mask3),".",bin(mask4))
 
+    # prepare to compare ip's
+    # use mask and packet's ip's
     ip1 = mask1 & p_ip1
     ip2 = mask2 & p_ip2
     ip3 = mask3 & p_ip3
     ip4 = mask4 & p_ip4
 
+    # use mask and rules' ip's
     r_ip1 = mask1 & r_ip1
     r_ip2 = mask2 & r_ip2
     r_ip3 = mask3 & r_ip3
     r_ip4 = mask4 & r_ip4
 
-    #print(mask1,".",mask2,".",mask3,".",mask4)
-    #print("ip",ip1,".",ip2,".",ip3,".",ip4)
-    #print("r_ip",r_ip1,".",r_ip2,".",r_ip3,".",r_ip4)
     if ip1==r_ip1 and ip2==r_ip2 and ip3==r_ip3 and ip4==r_ip4:
         return True
     else:
         return False
+
 
 def get_ports(r_port, port):
     # if no comma, no ports to be separated
     if "," not in r_port or r_port == "*":
         return r_port
 
+    # if multiple ports listed, check each one
     ports = r_port.split(",")
-
     for p in ports:
         if p == port:
             return p
 
+    # if it reaches here, then none of the ports match
     return False
 
 def firewall(rules, direction, ip, port, flag):
@@ -116,15 +123,16 @@ def firewall(rules, direction, ip, port, flag):
         elif port_result == False:
             port_match = 0
         else: port_match = 0
-
-        #if rules[i][4] == port or rules[i][4] == "*":
-        #    port_match = 1
-        #else: port_match = 0
         if DEBUG: print("port:", rules[i][4], port, "match:", port_match)
 
         # check if established connection
         # turn the flag into an int and check
-        f = int(flag)
+        try:
+            f = int(flag)
+        except:
+            print("Error: incorrect packet format. Exiting...")
+            sys.exit(1)
+
         if rules[i][5] == "":
             establish = 1
         elif rules[i][5] == "established" and f == 1:
@@ -136,52 +144,55 @@ def firewall(rules, direction, ip, port, flag):
         # figure out what to do with packet
         # if all match, do exactly as rule says
         # return which rule number to follow
-        #print("Rules",rules[i])
         if d_match == 1 and ip_match == 1 and port_match == 1 and establish == 1:
-            #print("Rules:",rules[i])
             return str(rules[i][0]) + " " + rules[i][2]
-    # if reaches here, then no rules for this packet, so reject
 
+    # if reaches here, then no rules for this packet, so reject
     return "drop"
 
-
-
-
-
-
-
-# start, first read rules from configuration file
-# configuration file specified on command line
-
-# list of rules will be saved
-# list of lists
-# line number for rule, direction, action, ip, port, flag
 
 #################
 ##### Rules #####
 #################
-rules = [[]]
 
+rules = [[]]
 linenum = 0
 flag = ""
-config_file = sys.argv[1]
+config_file = ""
+
+# some input error checking first
+if len(sys.argv) == 2:
+    config_file = sys.argv[1]
+else:
+    print("Error: incorrect amount of arguments supplied. Exiting...", file=sys.stderr)
+    sys.exit(1)
+if not (os.path.exists(config_file) and os.path.isfile(config_file)):
+    print("Error: \"",config_file,"\" does not exist or is not a file. Exiting...", file=sys.stderr)
+    sys.exit(1)
+if not config_file.lower().endswith(".txt"):
+    print("Error: file must be .txt type. Exiting...", file=sys.stderr)
+    sys.exit(1)
+
 with open(config_file, "r") as f:
-    #line = sys.stdin.buffer.readline()
     for line in f:
         # split string to be put into a list
         line = line.replace("\n", "")
         line.strip("\t")
         line = " ".join(line.split())
 
-        # ignore empty lines or comments
+        # ignore empty lines or comments, but increment line number
         if len(line) == 0 or line[0] == "#":
             linenum = linenum + 1
             continue
 
-        direction = line.split(" ", 1)[0]
-        action = line.split(" ", 2)[1]
-        ip = line.split(" ", 3)[2]
-        port = line.split(" ", 4)[3]
+        try:
+            direction = line.split(" ", 1)[0]
+            action = line.split(" ", 2)[1]
+            ip = line.split(" ", 3)[2]
+            port = line.split(" ", 4)[3]
+        except:
+            print("Error: rules are written weird. Continuing...", file=sys.stderr)
+            continue
         if len(line.split(" ")) == 5:
             flag = line.split(" ", 5)[4]
         else:
@@ -190,13 +201,10 @@ with open(config_file, "r") as f:
             rules[linenum] = [linenum+1, direction, action, str(ip), str(port), flag]
         else:
             rules.append([linenum+1, direction, action, str(ip), str(port), flag])
-        #print(rules[linenum])
         linenum = linenum + 1
 f.close()
 
 
-# packets read in from standard input
-# program reads from standard input until EOF, then should terminate
 
 ###################
 ##### Packets #####
@@ -204,28 +212,35 @@ f.close()
 
 # direction, ip, port, flag
 packet = ["", "", "", ""]
-for line in sys.stdin:
-    #print("packet:",line, end="", file=sys.stdout)
-    line = line.replace("\n", "")
-    line.strip("\t")
 
-    direction = line.split(" ", 1)[0]
-    ip = line.split(" ", 2)[1]
-    port = line.split(" ", 3)[2]
-    flag = line.split(" ", 4)[3]
+# first check if anything in standard output
+if not select.select([sys.stdin,],[],[],0.0)[0]:
+    print("Error: I need some file through standard input to work with. Exiting...", file=sys.stderr)
+    sys.exit(1)
+try:
+    for line in sys.stdin:
+        # clean up the list, then separate
+        line = line.replace("\n", "")
+        line.strip("\t")
 
+        direction = line.split(" ", 1)[0]
+        ip = line.split(" ", 2)[1]
+        port = line.split(" ", 3)[2]
+        flag = line.split(" ", 4)[3]
 
-    # time to accept, reject, or drop
-    decision = firewall(rules, direction, ip, port, flag)
-    if decision == "drop":
-        # do the drop output
-        print("drop() "+direction+" "+ip+" "+port+" "+flag, file=sys.stdout)
-    else:
-        # if doesn't say drop, then do action
-        linenum = decision.split(" ", 1)[0]
-        action = decision.split(" ", 2)[1]
-        print(action+"("+linenum+") "+direction+" "+ip+" "+port+" "+flag, file=sys.stdout)
-
+        # time to accept, reject, or drop
+        decision = firewall(rules, direction, ip, port, flag)
+        if decision == "drop":
+            # do the drop output
+            print("drop() "+direction+" "+ip+" "+port+" "+flag, file=sys.stdout)
+        else:
+            # if doesn't say drop, then do action
+            linenum = decision.split(" ", 1)[0]
+            action = decision.split(" ", 2)[1]
+            print(action+"("+linenum+") "+direction+" "+ip+" "+port+" "+flag, file=sys.stdout)
+except:
+    print("Error: file from standard input may not be text file. Exiting...", file=sys.stderr)
+    sys.exit(1)
 
 
 
