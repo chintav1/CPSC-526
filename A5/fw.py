@@ -139,7 +139,7 @@ def firewall(rules, direction, ip, port, flag):
         #print("Rules",rules[i])
         if d_match == 1 and ip_match == 1 and port_match == 1 and establish == 1:
             #print("Rules:",rules[i])
-            return str(i+1) + " " + rules[i][2]
+            return str(rules[i][0]) + " " + rules[i][2]
     # if reaches here, then no rules for this packet, so reject
 
     return "drop"
@@ -166,7 +166,7 @@ linenum = 0
 flag = ""
 config_file = sys.argv[1]
 with open(config_file, "r") as f:
-    line = sys.stdin.buffer.readline()
+    #line = sys.stdin.buffer.readline()
     for line in f:
         # split string to be put into a list
         line = line.replace("\n", "")
@@ -175,6 +175,7 @@ with open(config_file, "r") as f:
 
         # ignore empty lines or comments
         if len(line) == 0 or line[0] == "#":
+            linenum = linenum + 1
             continue
 
         direction = line.split(" ", 1)[0]
@@ -189,7 +190,7 @@ with open(config_file, "r") as f:
             rules[linenum] = [linenum+1, direction, action, str(ip), str(port), flag]
         else:
             rules.append([linenum+1, direction, action, str(ip), str(port), flag])
-        print(rules[linenum])
+        #print(rules[linenum])
         linenum = linenum + 1
 f.close()
 
