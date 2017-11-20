@@ -241,7 +241,7 @@ try:
             result = action+"("+linenum+") "+direction+" "+ip+" "+port+" "+flag
             print(result.rstrip(), file = sys.stdout)
 except:
-    print("Error: file from standard input may not be text file. Exiting...", file=sys.stderr)
+    print("Error: unable to comprehend file. Exiting...", file=sys.stderr)
     sys.exit(1)
 
 
