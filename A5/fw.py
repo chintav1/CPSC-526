@@ -232,12 +232,14 @@ try:
         decision = firewall(rules, direction, ip, port, flag)
         if decision == "drop":
             # do the drop output
-            print("drop() "+direction+" "+ip+" "+port+" "+flag, file=sys.stdout)
+            result = "drop() "+direction+" "+ip+" "+port+" "+flag
+            print(result.rstrip(), file = sys.stdout)
         else:
             # if doesn't say drop, then do action
             linenum = decision.split(" ", 1)[0]
             action = decision.split(" ", 2)[1]
-            print(action+"("+linenum+") "+direction+" "+ip+" "+port+" "+flag, file=sys.stdout)
+            result = action+"("+linenum+") "+direction+" "+ip+" "+port+" "+flag
+            print(result.rstrip(), file = sys.stdout)
 except:
     print("Error: file from standard input may not be text file. Exiting...", file=sys.stderr)
     sys.exit(1)
