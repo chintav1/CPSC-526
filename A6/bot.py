@@ -33,7 +33,7 @@ if ready[0]:
         ready = select.select([irc], [], [], 1) # wait 1 second
         if ready[0]:
             response = (irc.recv(1024)).decode("utf-8")
-        else: break
+        else: continue
 irc.send(bytes("JOIN #" + channel + "\r\n", "utf-8"))
 
 
@@ -44,7 +44,7 @@ while 1:
         response = (irc.recv(1024)).decode("utf-8")
         print(response)
     else:
-        print(nickname)
+        print("", end="")
 
     if response.split(" ", 1)[0] == "PING":
         argument = response.split(" ", 2)[1]
