@@ -3,9 +3,6 @@ import socket
 import select
 import signal
 
-def interrupted(signum, frame):
-    print("", end="")
-signal.signal(signal.SIGALRM, interrupted)
 
 try:
     hostname = sys.argv[1]
@@ -36,21 +33,13 @@ while 1:
     ready = select.select([irc], [], [], 2) # wait 2 seconds
     if ready[0]:
         response = (irc.recv(1024)).decode("utf-8")
-        #print(response)
 
     if response.split(" ", 1)[0] == "PING":
         argument = response.split(" ", 2)[1]
         irc.send(bytes("PONG " + argument + "\r\n", "utf-8"))
-        #print("PONG " + argument)
 
 
-    # wait for a few seconds?
-    signal.alarm(1)
-    try:
-        command = input("")
-    except:
-        continue
-    signal.alarm(0)
+    command = input("State thy command> ")
 
 
     if command == "status":
