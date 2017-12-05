@@ -22,9 +22,11 @@ nickname = "NotYourSlave"+str(number)
 irc.send(bytes("USER notabot 8 * : I'm OK\r\n", "utf-8"))
 irc.send(bytes("NICK " + nickname + "\r\n", "utf-8"))
 ready = select.select([irc], [], [], 1) # wait 1 second
+
 if ready[0]:
     response = (irc.recv(1024)).decode("utf-8")
-    while "Nickname already in use" in response:
+    print(response)
+    while "Nickname is already in use" in response:
         number = number + 1
         nickname = "NotYourSlave" + str(number)
         irc.send(bytes("NICK " + nickname + "\r\n", "utf-8"))
@@ -35,11 +37,14 @@ if ready[0]:
 irc.send(bytes("JOIN #" + channel + "\r\n", "utf-8"))
 
 
+
 while 1:
     ready = select.select([irc], [], [], 2) # wait 2 seconds
     if ready[0]:
         response = (irc.recv(1024)).decode("utf-8")
         print(response)
+    else:
+        print(nickname)
 
     if response.split(" ", 1)[0] == "PING":
         argument = response.split(" ", 2)[1]
